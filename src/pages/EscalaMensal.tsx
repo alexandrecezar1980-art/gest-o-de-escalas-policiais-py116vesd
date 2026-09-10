@@ -41,8 +41,19 @@ import {
   servidoresService,
   feriasService,
   feriadosService,
+  permanenciasService,
+  custodiasService,
 } from '@/services/policeServices'
-import type { Escala, Servidor, Ferias, Feriado, TipoDiaEscala, TipoFeriado } from '@/types/police'
+import type {
+  Escala,
+  Servidor,
+  Ferias,
+  Feriado,
+  TipoDiaEscala,
+  TipoFeriado,
+  Permanencia,
+  Custodia,
+} from '@/types/police'
 import {
   calcularHorariosAgentes,
   formatarDataBr,
@@ -50,6 +61,8 @@ import {
   formatarNumeroWhatsapp,
   gerarTextoWhatsappPlantao,
 } from '@/lib/escalaRules'
+import ServidorAutocomplete from '@/components/ServidorAutocomplete'
+import ConfirmacaoOperacionalModal from '@/components/ConfirmacaoOperacionalModal'
 import useRealtime from '@/hooks/use-realtime'
 
 export default function EscalaMensal() {
@@ -61,6 +74,8 @@ export default function EscalaMensal() {
   const [servidores, setServidores] = useState<Servidor[]>([])
   const [ferias, setFerias] = useState<Ferias[]>([])
   const [feriados, setFeriados] = useState<Feriado[]>([])
+  const [permanencias, setPermanencias] = useState<Permanencia[]>([])
+  const [custodias, setCustodias] = useState<Custodia[]>([])
   const [loading, setLoading] = useState(true)
 
   // Modal de Feriados
@@ -80,6 +95,13 @@ export default function EscalaMensal() {
   const [formAgente3, setFormAgente3] = useState<string>('')
   const [salvandoDia, setSalvandoDia] = useState(false)
 
+  // Modal de confirmação operacional inteligente (Item 5)
+  const [modalConfirmacaoOperacionalOpen, setModalConfirmacaoOperacionalOpen] = useState(false)
+  const [motivoConfirmacaoOperacional, setMotivoConfirmacaoOperacional] = useState('')
+  const [acaoConfirmadaPendente, setAcaoConfirmadaPendente] = useState<
+    (() => Promise<void>) | null
+  >(null)
+
   // Alertas de férias no dia selecionado
   const [alertaFeriasConfirmado, setAlertaFeriasConfirmado] = useState(false)
 
@@ -90,16 +112,20 @@ export default function EscalaMensal() {
   const carregarDados = useCallback(async () => {
     try {
       setLoading(true)
-      const [esc, srv, fer, feri] = await Promise.all([
+      const [esc, srv, fer, feri, perm, cust] = await Promise.all([
         escalasService.getByMesAno(mes, ano),
         servidoresService.getAll(),
         feriasService.getAll(),
         feriadosService.getAll(),
+        permanenciasService.getByMesAno(mes, ano),
+        custodiasService.getByMesAno(mes, ano),
       ])
       setEscalas(esc)
       setServidores(srv)
       setFerias(fer)
       setFeriados(feri)
+      setPermanencias(perm)
+      setCustodias(cust)
     } catch (err) {
       console.error(err)
       toast.error('Erro ao carregar escala mensal.')
@@ -251,20 +277,10 @@ export default function EscalaMensal() {
     mes,
   ])
 
-  // Salvar Dia da Escala
-  const handleSaveDia = async () => {
+  // Execução final da gravação da escala após eventuais confirmações operacionais
+  const executarGravacaoEscala = async () => {
     if (!editingDia) return
-
-    // Se houver servidores em férias e o admin ainda não confirmou expressamente
-    if (avisosFeriasNoDia.length > 0 && !alertaFeriasConfirmado) {
-      toast.warning(
-        'Atenção: Há servidores em férias selecionados. Marque a confirmação para prosseguir.',
-      )
-      return
-    }
-
     const tipoDia = getTipoDia(editingDia)
-
     try {
       setSalvandoDia(true)
       await escalasService.upsertDia({
@@ -280,7 +296,7 @@ export default function EscalaMensal() {
       })
 
       toast.success(
-        `Escala do dia ${String(editingDia).padStart(2, '0')}/${String(mes).padStart(2, '0')} salva!`,
+        `Escala do dia ${String(editingDia).padStart(2, '0')}/${String(mes).padStart(2, '0')} salva com sucesso!`,
       )
       setEditingDia(null)
       carregarDados()
@@ -291,6 +307,82 @@ export default function EscalaMensal() {
     } finally {
       setSalvandoDia(false)
     }
+  }
+
+  // Salvar Dia da Escala com Modais de Confirmação Inteligente para Regras Operacionais (Item 5)
+  const handleSaveDia = async () => {
+    if (!editingDia) return
+
+    const tipoDia = getTipoDia(editingDia)
+    const selecionados = [formDelegado, formEscrivao, formAgente1, formAgente2, formAgente3].filter(
+      Boolean,
+    ) as string[]
+
+    // 1. Caso: 3º Agente em dia útil (que muda a divisão de horários para a regra de sexta)
+    const is3oAgenteDiaUtil = tipoDia === 'Dia Útil' && !!formAgente3
+
+    // 2. Caso: Sobreposição de plantões / servidor escalado em outro papel no mesmo dia
+    // (Ex: já escalado na permanência ou na custódia do mesmo dia)
+    const permDoDia = permanencias.find((p) => p.dia === editingDia)
+    const servsPermanencia = permDoDia ? [permDoDia.agente1, permDoDia.agente2].filter(Boolean) : []
+
+    const custDoDia = custodias.find((c) => c.dia === editingDia)
+    const servsCustodia = custDoDia
+      ? [custDoDia.agente1, custDoDia.agente2, custDoDia.agente3].filter(Boolean)
+      : []
+
+    const conflitoPermanencia = selecionados.filter((id) => servsPermanencia.includes(id))
+    const conflitoCustodia = selecionados.filter((id) => servsCustodia.includes(id))
+
+    // 3. Caso: Servidor em Férias
+    const temFerias = avisosFeriasNoDia.length > 0 && !alertaFeriasConfirmado
+
+    // Construção das consequências para o modal de confirmação
+    const motivos: string[] = []
+
+    if (is3oAgenteDiaUtil) {
+      motivos.push(
+        'A inclusão do 3º agente em dia útil altera a divisão de horários da equipe: a divisão de horários dos agentes passará a seguir a regra de Sexta-Feira (18h às 08h com revezamento triplo).',
+      )
+    }
+
+    if (conflitoPermanencia.length > 0) {
+      const nomes = conflitoPermanencia
+        .map((id) => servidores.find((s) => s.id === id)?.nome || 'Servidor')
+        .join(', ')
+      motivos.push(
+        `O(s) servidor(es) ${nomes} já consta(m) alocado(s) na Escala de Permanência deste mesmo dia.`,
+      )
+    }
+
+    if (conflitoCustodia.length > 0) {
+      const nomes = conflitoCustodia
+        .map((id) => servidores.find((s) => s.id === id)?.nome || 'Servidor')
+        .join(', ')
+      motivos.push(
+        `O(s) servidor(es) ${nomes} já consta(m) escalado(s) na Escala de Custódia deste mesmo dia.`,
+      )
+    }
+
+    if (temFerias) {
+      const nomesFerias = avisosFeriasNoDia
+        .map(
+          (av) =>
+            `${av.servidor.nome} (${formatarDataBr(av.ferias.inicio)} a ${formatarDataBr(av.ferias.fim)})`,
+        )
+        .join('; ')
+      motivos.push(`Servidor(es) em período de férias regulamentares: ${nomesFerias}.`)
+    }
+
+    // Se houver qualquer uma dessas alterações de regras operacionais, aciona o modal inteligente
+    if (motivos.length > 0) {
+      setMotivoConfirmacaoOperacional(motivos.join('\n\n'))
+      setAcaoConfirmadaPendente(() => executarGravacaoEscala)
+      setModalConfirmacaoOperacionalOpen(true)
+      return
+    }
+
+    await executarGravacaoEscala()
   }
 
   // Cadastrar Feriado
@@ -832,92 +924,68 @@ export default function EscalaMensal() {
           )}
 
           <div className="space-y-4 py-2">
-            {/* Delegado */}
+            {/* Delegado com Autocomplete Universal */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-[#1F2937]">
                 01 Delegado de Polícia *
               </Label>
-              <Select value={formDelegado} onValueChange={setFormDelegado}>
-                <SelectTrigger className="h-10 border-[#D1D5DB]">
-                  <SelectValue placeholder="Selecione o Delegado Plantonista" />
-                </SelectTrigger>
-                <SelectContent>
-                  {delegados.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ServidorAutocomplete
+                servidores={delegados}
+                value={formDelegado}
+                onChange={setFormDelegado}
+                placeholder="Buscar delegado por nome ou matrícula..."
+                filtroCargo="Delegado"
+              />
             </div>
 
-            {/* Escrivão */}
+            {/* Escrivão com Autocomplete Universal */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-[#1F2937]">
                 01 Escrivão de Polícia *
               </Label>
-              <Select value={formEscrivao} onValueChange={setFormEscrivao}>
-                <SelectTrigger className="h-10 border-[#D1D5DB]">
-                  <SelectValue placeholder="Selecione o Escrivão Plantonista" />
-                </SelectTrigger>
-                <SelectContent>
-                  {escrivaes.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ServidorAutocomplete
+                servidores={escrivaes}
+                value={formEscrivao}
+                onChange={setFormEscrivao}
+                placeholder="Buscar escrivão por nome ou matrícula..."
+                filtroCargo="Escrivão"
+              />
             </div>
 
-            {/* Agentes 1 e 2 */}
+            {/* Agentes 1 e 2 com Autocomplete Universal */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-[#1F2937]">
                   Agente / Investigador 1 *
                 </Label>
-                <Select value={formAgente1} onValueChange={setFormAgente1}>
-                  <SelectTrigger className="h-10 border-[#D1D5DB]">
-                    <SelectValue placeholder="Selecione Agente 1" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {agentes.map((ag) => (
-                      <SelectItem
-                        key={ag.id}
-                        value={ag.id}
-                        disabled={ag.id === formAgente2 || ag.id === formAgente3}
-                      >
-                        {ag.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ServidorAutocomplete
+                  servidores={agentes}
+                  value={formAgente1}
+                  onChange={setFormAgente1}
+                  placeholder="Buscar agente 1..."
+                  filtroCargo="Agente/Investigador"
+                  disabledIds={[formAgente2, formAgente3].filter(Boolean)}
+                  disabledMessage="Já selecionado nesta equipe"
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-[#1F2937]">
                   Agente / Investigador 2 *
                 </Label>
-                <Select value={formAgente2} onValueChange={setFormAgente2}>
-                  <SelectTrigger className="h-10 border-[#D1D5DB]">
-                    <SelectValue placeholder="Selecione Agente 2" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {agentes.map((ag) => (
-                      <SelectItem
-                        key={ag.id}
-                        value={ag.id}
-                        disabled={ag.id === formAgente1 || ag.id === formAgente3}
-                      >
-                        {ag.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ServidorAutocomplete
+                  servidores={agentes}
+                  value={formAgente2}
+                  onChange={setFormAgente2}
+                  placeholder="Buscar agente 2..."
+                  filtroCargo="Agente/Investigador"
+                  disabledIds={[formAgente1, formAgente3].filter(Boolean)}
+                  disabledMessage="Já selecionado nesta equipe"
+                />
               </div>
             </div>
 
-            {/* 3º Agente (Opcional ou Obrigatório conforme tipo de dia) */}
+            {/* 3º Agente com Autocomplete Universal */}
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-semibold text-[#1F2937]">
@@ -934,25 +1002,19 @@ export default function EscalaMensal() {
                   </Button>
                 )}
               </div>
-              <Select value={formAgente3} onValueChange={setFormAgente3}>
-                <SelectTrigger className="h-10 border-[#D1D5DB]">
-                  <SelectValue placeholder="Nenhum (Composição padrão com 2 agentes)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agentes.map((ag) => (
-                    <SelectItem
-                      key={ag.id}
-                      value={ag.id}
-                      disabled={ag.id === formAgente1 || ag.id === formAgente2}
-                    >
-                      {ag.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ServidorAutocomplete
+                servidores={agentes}
+                value={formAgente3}
+                onChange={setFormAgente3}
+                placeholder="Buscar 3º agente (opcional)..."
+                filtroCargo="Agente/Investigador"
+                disabledIds={[formAgente1, formAgente2].filter(Boolean)}
+                disabledMessage="Já selecionado nesta equipe"
+                labelVazio="Nenhum (Composição padrão com 2 agentes)"
+              />
               <p className="text-[11px] text-[#6B7280]">
                 {editingDia && getTipoDia(editingDia) === 'Dia Útil'
-                  ? '💡 Regra Flexível do PRD: Ao adicionar um 3º agente em dia útil, a grade dos horários muda automaticamente para a divisão da Sexta-Feira!'
+                  ? '💡 Regra Flexível: Ao adicionar um 3º agente em dia útil, a divisão dos horários passará a seguir a regra de Sexta-Feira com confirmação.'
                   : 'Em Sextas, Sábados, Domingos e Feriados a composição padrão é tripla.'}
               </p>
             </div>
@@ -997,6 +1059,22 @@ export default function EscalaMensal() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Confirmação Inteligente para Alteração de Regras Operacionais (Item 5) */}
+      <ConfirmacaoOperacionalModal
+        open={modalConfirmacaoOperacionalOpen}
+        onOpenChange={setModalConfirmacaoOperacionalOpen}
+        onConfirm={() => {
+          if (acaoConfirmadaPendente) {
+            acaoConfirmadaPendente()
+            setAcaoConfirmadaPendente(null)
+          }
+        }}
+        title="Você realmente confirma essa inclusão/alteração fora do padrão?"
+        consequencia={motivoConfirmacaoOperacional}
+        confirmText="Sim, confirmar"
+        cancelText="Cancelar"
+      />
 
       {/* Modal WhatsApp do Plantão */}
       <Dialog open={whatsappDia !== null} onOpenChange={(open) => !open && setWhatsappDia(null)}>

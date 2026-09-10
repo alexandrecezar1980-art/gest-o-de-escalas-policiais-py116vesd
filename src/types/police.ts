@@ -1,5 +1,14 @@
 export type CargoServidor = 'Delegado' | 'Escrivão' | 'Agente/Investigador'
 export type StatusServidor = 'Ativo' | 'Inativo'
+export type DiaCompensacao =
+  | 'Segunda-feira'
+  | 'Terça-feira'
+  | 'Quarta-feira'
+  | 'Quinta-feira'
+  | 'Sexta-feira'
+  | 'Sábado'
+  | 'Domingo'
+  | 'Rotativo'
 
 export interface Servidor {
   id: string
@@ -7,6 +16,10 @@ export interface Servidor {
   cargo: CargoServidor
   telefone: string
   status: StatusServidor
+  matricula?: string
+  cpf?: string
+  email?: string
+  dia_compensacao?: DiaCompensacao | string
   created: string
   updated: string
 }

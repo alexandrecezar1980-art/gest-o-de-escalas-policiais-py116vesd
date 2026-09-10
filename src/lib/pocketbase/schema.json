@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T12:25:53.514Z",
+  "generatedAt": "2026-09-10T14:21:06.861Z",
   "collections": [
     {
       "name": "users",
@@ -94,6 +94,40 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "matricula",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cpf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "email",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dia_compensacao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Segunda-feira",
+            "Terça-feira",
+            "Quarta-feira",
+            "Quinta-feira",
+            "Sexta-feira",
+            "Sábado",
+            "Domingo",
+            "Rotativo"
+          ]
         }
       ],
       "indexes": [

@@ -24,6 +24,8 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { permanenciasService, servidoresService } from '@/services/policeServices'
 import type { Permanencia, Servidor } from '@/types/police'
+import ServidorAutocomplete from '@/components/ServidorAutocomplete'
+import ConfirmacaoOperacionalModal from '@/components/ConfirmacaoOperacionalModal'
 import useRealtime from '@/hooks/use-realtime'
 
 export default function EscalaPermanencia() {
@@ -75,8 +77,10 @@ export default function EscalaPermanencia() {
 
   useRealtime('permanencias', () => carregarDados())
 
-  const agentes = useMemo(
-    () => servidores.filter((s) => s.cargo === 'Agente/Investigador' && s.status === 'Ativo'),
+  // Escala de Permanência UNIFICADA: aceita indistintamente qualquer servidor policial ativo
+  // (Escrivães, Agentes/Investigadores ou Delegados) sem distinção de cargo!
+  const servidoresPoliciais = useMemo(
+    () => servidores.filter((s) => s.status === 'Ativo'),
     [servidores],
   )
 
@@ -272,11 +276,11 @@ export default function EscalaPermanencia() {
           </div>
           <h1 className="text-2xl font-bold text-[#0B2545] mt-1.5 flex items-center gap-2">
             <Building2 className="w-6 h-6 text-[#0B2545]" />
-            Escala de Permanência (Dias Úteis)
+            Escala de Permanência Unificada (Dias Úteis)
           </h1>
           <p className="text-xs sm:text-sm text-[#6B7280]">
-            Agrupamento automático de segunda a sexta-feira por dia da semana com alocação
-            obrigatória de 02 Agentes Permanentes.
+            Seleção unificada sem distinção de cargo: qualquer servidor policial disponível pode
+            compor a dupla de permanência (obrigatório 02 servidores distintos por dia útil).
           </p>
         </div>
 
@@ -365,7 +369,8 @@ export default function EscalaPermanencia() {
         </div>
 
         <div className="text-[11px] text-[#6B7280]">
-          Regra: <strong>Obrigatório 02 Agentes</strong> distintos por dia útil de expediente.
+          Regra: <strong>Obrigatório 02 Servidores Policiais</strong> distintos por dia útil
+          (Escrivães, Agentes ou Delegados).
         </div>
       </div>
 
@@ -402,7 +407,7 @@ export default function EscalaPermanencia() {
                   </div>
 
                   <span className="text-xs font-medium text-[#6B7280]">
-                    2 Agentes Permanentes / dia
+                    2 Servidores Policiais / dia (Seleção Unificada)
                   </span>
                 </div>
 
@@ -467,80 +472,46 @@ export default function EscalaPermanencia() {
                             </div>
                           </div>
 
-                          {/* Seletores dos 2 Agentes Permanentes */}
+                          {/* Seletores dos 2 Servidores Policiais Permanentes (Autocomplete Unificado) */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
-                            {/* Agente 1 */}
+                            {/* Servidor 1 */}
                             <div className="space-y-1">
                               <Label className="text-[11px] font-semibold text-[#1F2937] flex items-center justify-between">
-                                <span>Agente Permanente 1 *</span>
+                                <span>1º Servidor da Dupla *</span>
                                 {aloc.agente1 && (
                                   <span className="text-[10px] text-emerald-700 font-normal">
                                     Selecionado
                                   </span>
                                 )}
                               </Label>
-                              <Select
+                              <ServidorAutocomplete
+                                servidores={servidoresPoliciais}
                                 value={aloc.agente1}
-                                onValueChange={(val) => handleUpdateAgente(dia, 'agente1', val)}
-                              >
-                                <SelectTrigger
-                                  className={`h-9 text-xs border ${
-                                    !aloc.agente1
-                                      ? 'border-amber-300 bg-amber-50/30'
-                                      : 'border-[#D1D5DB]'
-                                  }`}
-                                >
-                                  <SelectValue placeholder="Selecione o 1º Agente" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {agentes.map((ag) => (
-                                    <SelectItem
-                                      key={ag.id}
-                                      value={ag.id}
-                                      disabled={ag.id === aloc.agente2}
-                                    >
-                                      {ag.nome}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                onChange={(id) => handleUpdateAgente(dia, 'agente1', id)}
+                                placeholder="Buscar 1º servidor (nome, cargo, mat)..."
+                                disabledIds={aloc.agente2 ? [aloc.agente2] : []}
+                                disabledMessage="Já selecionado como 2º servidor"
+                              />
                             </div>
 
-                            {/* Agente 2 */}
+                            {/* Servidor 2 */}
                             <div className="space-y-1">
                               <Label className="text-[11px] font-semibold text-[#1F2937] flex items-center justify-between">
-                                <span>Agente Permanente 2 *</span>
+                                <span>2º Servidor da Dupla *</span>
                                 {aloc.agente2 && (
                                   <span className="text-[10px] text-emerald-700 font-normal">
                                     Selecionado
                                   </span>
                                 )}
                               </Label>
-                              <Select
+                              <ServidorAutocomplete
+                                servidores={servidoresPoliciais}
                                 value={aloc.agente2}
-                                onValueChange={(val) => handleUpdateAgente(dia, 'agente2', val)}
-                              >
-                                <SelectTrigger
-                                  className={`h-9 text-xs border ${
-                                    !aloc.agente2
-                                      ? 'border-amber-300 bg-amber-50/30'
-                                      : 'border-[#D1D5DB]'
-                                  }`}
-                                >
-                                  <SelectValue placeholder="Selecione o 2º Agente" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {agentes.map((ag) => (
-                                    <SelectItem
-                                      key={ag.id}
-                                      value={ag.id}
-                                      disabled={ag.id === aloc.agente1}
-                                    >
-                                      {ag.nome}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                onChange={(id) => handleUpdateAgente(dia, 'agente2', id)}
+                                placeholder="Buscar 2º servidor (nome, cargo, mat)..."
+                                disabledIds={aloc.agente1 ? [aloc.agente1] : []}
+                                disabledMessage="Já selecionado como 1º servidor"
+                              />
                             </div>
                           </div>
 
@@ -590,8 +561,8 @@ export default function EscalaPermanencia() {
             <tr className="bg-[#0B2545] text-white">
               <th className="py-2 px-2 border border-[#0B2545] text-center w-16">DATA</th>
               <th className="py-2 px-2 border border-[#0B2545] text-left w-28">DIA DA SEMANA</th>
-              <th className="py-2 px-2 border border-[#0B2545] text-left">AGENTE PERMANENTE 1</th>
-              <th className="py-2 px-2 border border-[#0B2545] text-left">AGENTE PERMANENTE 2</th>
+              <th className="py-2 px-2 border border-[#0B2545] text-left">SERVIDOR PERMANENTE 1</th>
+              <th className="py-2 px-2 border border-[#0B2545] text-left">SERVIDOR PERMANENTE 2</th>
             </tr>
           </thead>
           <tbody>

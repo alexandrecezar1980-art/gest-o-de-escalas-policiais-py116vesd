@@ -30,8 +30,15 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { custodiasService, servidoresService, feriadosService } from '@/services/policeServices'
-import type { Custodia, Servidor, Feriado, TipoDiaEscala } from '@/types/police'
+import {
+  custodiasService,
+  servidoresService,
+  feriadosService,
+  escalasService,
+} from '@/services/policeServices'
+import type { Custodia, Servidor, Feriado, TipoDiaEscala, Escala } from '@/types/police'
+import ServidorAutocomplete from '@/components/ServidorAutocomplete'
+import ConfirmacaoOperacionalModal from '@/components/ConfirmacaoOperacionalModal'
 import useRealtime from '@/hooks/use-realtime'
 
 export default function EscalaCustodias() {
@@ -40,6 +47,7 @@ export default function EscalaCustodias() {
   const [ano, setAno] = useState<number>(now.getFullYear())
 
   const [custodias, setCustodias] = useState<Custodia[]>([])
+  const [escalasMensais, setEscalasMensais] = useState<Escala[]>([])
   const [servidores, setServidores] = useState<Servidor[]>([])
   const [feriados, setFeriados] = useState<Feriado[]>([])
   const [loading, setLoading] = useState(true)
@@ -51,25 +59,31 @@ export default function EscalaCustodias() {
   const [formAgente3, setFormAgente3] = useState<string>('')
   const [salvandoDia, setSalvandoDia] = useState(false)
 
+  // Modal de confirmação inteligente para sobreposição de plantão no mesmo dia
+  const [modalConfirmacaoOpen, setModalConfirmacaoOpen] = useState(false)
+  const [consequenciaConfirmacao, setConsequenciaConfirmacao] = useState('')
+  const [acaoAposConfirmacao, setAcaoAposConfirmacao] = useState<(() => Promise<void>) | null>(null)
+
   const carregarDados = useCallback(async () => {
     try {
       setLoading(true)
-      const [cust, srv, feri] = await Promise.all([
+      const [cust, srv, feri, esc] = await Promise.all([
         custodiasService.getByMesAno(mes, ano),
         servidoresService.getAll(),
         feriadosService.getAll(),
+        escalasService.getByMesAno(mes, ano),
       ])
       setCustodias(cust)
       setServidores(srv)
       setFeriados(feri)
+      setEscalasMensais(esc)
     } catch (err) {
       console.error(err)
-      toast.error('Erro ao carregar escala de custódias.')
+      toast.error('Erro ao carregar escala de custódia.')
     } finally {
       setLoading(false)
     }
   }, [mes, ano])
-
   useEffect(() => {
     carregarDados()
   }, [carregarDados])
@@ -181,23 +195,8 @@ export default function EscalaCustodias() {
     setFormAgente3(c?.agente3 || '')
   }
 
-  const handleSalvarDia = async () => {
+  const executarSalvarCustodia = async () => {
     if (!editingDia) return
-
-    // Validar de 2 a 3 agentes
-    if (!formAgente1 || !formAgente2) {
-      toast.warning('Selecione pelo menos 2 agentes para a custódia do dia.')
-      return
-    }
-
-    if (
-      formAgente1 === formAgente2 ||
-      (formAgente3 && (formAgente3 === formAgente1 || formAgente3 === formAgente2))
-    ) {
-      toast.error('Os agentes selecionados não podem ser iguais. Escolha servidores diferentes.')
-      return
-    }
-
     try {
       setSalvandoDia(true)
       await custodiasService.upsertDia({
@@ -219,6 +218,53 @@ export default function EscalaCustodias() {
     } finally {
       setSalvandoDia(false)
     }
+  }
+
+  const handleSalvarDia = async () => {
+    if (!editingDia) return
+
+    // Validar de 2 a 3 agentes
+    if (!formAgente1 || !formAgente2) {
+      toast.warning('Selecione pelo menos 2 agentes para a custódia do dia.')
+      return
+    }
+
+    if (
+      formAgente1 === formAgente2 ||
+      (formAgente3 && (formAgente3 === formAgente1 || formAgente3 === formAgente2))
+    ) {
+      toast.error('Os agentes selecionados não podem ser iguais. Escolha servidores diferentes.')
+      return
+    }
+
+    // Modal de confirmação inteligente: Sobreposição com plantão geral no mesmo dia
+    const agentesSelecionados = [formAgente1, formAgente2, formAgente3].filter(Boolean) as string[]
+    const escalaDoDia = escalasMensais.find((e) => e.dia === editingDia)
+    const plantonistasDoDia = escalaDoDia
+      ? [
+          escalaDoDia.delegado,
+          escalaDoDia.escrivao,
+          escalaDoDia.agente1,
+          escalaDoDia.agente2,
+          escalaDoDia.agente3,
+        ].filter(Boolean)
+      : []
+
+    const sobrepostos = agentesSelecionados.filter((id) => plantonistasDoDia.includes(id))
+
+    if (sobrepostos.length > 0) {
+      const nomes = sobrepostos
+        .map((id) => servidores.find((s) => s.id === id)?.nome || 'Servidor')
+        .join(', ')
+      setConsequenciaConfirmacao(
+        `O(s) servidor(es) ${nomes} já consta(m) escalado(s) na Escala Geral de Plantão do dia ${String(editingDia).padStart(2, '0')}/${String(mes).padStart(2, '0')}. Essa inclusão resultará em sobreposição de funções operacionais.`,
+      )
+      setAcaoAposConfirmacao(() => executarSalvarCustodia)
+      setModalConfirmacaoOpen(true)
+      return
+    }
+
+    await executarSalvarCustodia()
   }
 
   const mesesNomes = [
@@ -548,49 +594,35 @@ export default function EscalaCustodias() {
               </p>
             </div>
 
-            {/* Agente 1 */}
+            {/* Agente 1 com Autocomplete Universal */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-[#1F2937]">Agente de Custódia 1 *</Label>
-              <Select value={formAgente1} onValueChange={setFormAgente1}>
-                <SelectTrigger className="h-10 border-[#D1D5DB] text-xs">
-                  <SelectValue placeholder="Selecione o 1º Agente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agentes.map((ag) => (
-                    <SelectItem
-                      key={ag.id}
-                      value={ag.id}
-                      disabled={ag.id === formAgente2 || ag.id === formAgente3}
-                    >
-                      {ag.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ServidorAutocomplete
+                servidores={agentes}
+                value={formAgente1}
+                onChange={setFormAgente1}
+                placeholder="Buscar agente 1 por nome, matrícula..."
+                filtroCargo="Agente/Investigador"
+                disabledIds={[formAgente2, formAgente3].filter(Boolean)}
+                disabledMessage="Já selecionado nesta equipe"
+              />
             </div>
 
-            {/* Agente 2 */}
+            {/* Agente 2 com Autocomplete Universal */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-[#1F2937]">Agente de Custódia 2 *</Label>
-              <Select value={formAgente2} onValueChange={setFormAgente2}>
-                <SelectTrigger className="h-10 border-[#D1D5DB] text-xs">
-                  <SelectValue placeholder="Selecione o 2º Agente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agentes.map((ag) => (
-                    <SelectItem
-                      key={ag.id}
-                      value={ag.id}
-                      disabled={ag.id === formAgente1 || ag.id === formAgente3}
-                    >
-                      {ag.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ServidorAutocomplete
+                servidores={agentes}
+                value={formAgente2}
+                onChange={setFormAgente2}
+                placeholder="Buscar agente 2 por nome, matrícula..."
+                filtroCargo="Agente/Investigador"
+                disabledIds={[formAgente1, formAgente3].filter(Boolean)}
+                disabledMessage="Já selecionado nesta equipe"
+              />
             </div>
 
-            {/* Agente 3 (Opcional) */}
+            {/* Agente 3 (Opcional) com Autocomplete Universal */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-semibold text-[#1F2937]">
@@ -608,22 +640,16 @@ export default function EscalaCustodias() {
                   </Button>
                 )}
               </div>
-              <Select value={formAgente3} onValueChange={setFormAgente3}>
-                <SelectTrigger className="h-10 border-[#D1D5DB] text-xs">
-                  <SelectValue placeholder="Nenhum (Composição padrão com 2 agentes)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agentes.map((ag) => (
-                    <SelectItem
-                      key={ag.id}
-                      value={ag.id}
-                      disabled={ag.id === formAgente1 || ag.id === formAgente2}
-                    >
-                      {ag.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ServidorAutocomplete
+                servidores={agentes}
+                value={formAgente3}
+                onChange={setFormAgente3}
+                placeholder="Buscar 3º agente (opcional)..."
+                filtroCargo="Agente/Investigador"
+                disabledIds={[formAgente1, formAgente2].filter(Boolean)}
+                disabledMessage="Já selecionado nesta equipe"
+                labelVazio="Nenhum (Composição padrão com 2 agentes)"
+              />
             </div>
           </div>
 
@@ -648,6 +674,22 @@ export default function EscalaCustodias() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Confirmação Inteligente para Sobreposição de Plantões */}
+      <ConfirmacaoOperacionalModal
+        open={modalConfirmacaoOpen}
+        onOpenChange={setModalConfirmacaoOpen}
+        onConfirm={() => {
+          if (acaoAposConfirmacao) {
+            acaoAposConfirmacao()
+            setAcaoAposConfirmacao(null)
+          }
+        }}
+        title="Você realmente confirma essa inclusão/alteração fora do padrão?"
+        consequencia={consequenciaConfirmacao}
+        confirmText="Sim, confirmar"
+        cancelText="Cancelar"
+      />
     </div>
   )
 }

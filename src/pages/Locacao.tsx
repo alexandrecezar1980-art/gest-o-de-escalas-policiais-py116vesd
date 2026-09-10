@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Building2, Plus, Edit2, Trash2, AlertCircle, Users, Layers } from 'lucide-react'
+import {
+  Building2,
+  Plus,
+  Edit2,
+  Trash2,
+  AlertCircle,
+  Users,
+  Layers,
+  Printer,
+  X,
+  AlertTriangle,
+} from 'lucide-react'
 import BrasaoPCPB from '@/components/BrasaoPCPB'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -33,6 +37,8 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { unidadesService, servidoresService } from '@/services/policeServices'
 import type { Unidade, Servidor } from '@/types/police'
+import ServidorAutocomplete from '@/components/ServidorAutocomplete'
+import ConfirmacaoOperacionalModal from '@/components/ConfirmacaoOperacionalModal'
 import useRealtime from '@/hooks/use-realtime'
 
 export default function Locacao() {
@@ -49,6 +55,15 @@ export default function Locacao() {
   const [formAgentes, setFormAgentes] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+
+  // Autocomplete auxiliar temporário para adicionar novos Escrivães ou Agentes
+  const [novoEscrivaoId, setNovoEscrivaoId] = useState('')
+  const [novoAgenteId, setNovoAgenteId] = useState('')
+
+  // Modal de Confirmação para quando exceder a quantidade padrão recomendada (Item 3)
+  const [modalConfirmacaoExcessoOpen, setModalConfirmacaoExcessoOpen] = useState(false)
+  const [acaoConfirmacaoPendente, setAcaoConfirmacaoPendente] = useState<(() => void) | null>(null)
+  const [motivoConfirmacao, setMotivoConfirmacao] = useState('')
 
   // Delete
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -75,18 +90,28 @@ export default function Locacao() {
   useRealtime('unidades', () => carregarDados())
   useRealtime('servidores', () => carregarDados())
 
-  // Servidores já lotados em outras unidades (regra: 1 servidor só pode estar em 1 unidade)
+  // Servidores já lotados em outras unidades:
+  // NOTA: Conforme PRD item 3: "Delegados Multi-Unidade: permitir que o MESMO Delegado seja alocado em mais de uma delegacia/unidade (remover a trava que impede delegado duplicado entre unidades)."
+  // Portanto, NÃO bloqueamos delegados! Apenas avisamos caso queira.
+  // Para Escrivães e Agentes, mantemos a indicação de lotação.
   const servidoresLotadosEmOutras = useMemo(() => {
-    const map = new Map<string, string>() // servidorId -> nomeDaUnidade
+    const map = new Map<string, string[]>() // servidorId -> lista de nomes de unidades
     for (const u of unidades) {
       if (editingId && u.id === editingId) continue // ignora a unidade em edição
 
-      if (u.delegado) map.set(u.delegado, u.nome)
-      if (u.escrivao1) map.set(u.escrivao1, u.nome)
-      if (u.escrivao2) map.set(u.escrivao2, u.nome)
+      const registrar = (id?: string | null) => {
+        if (!id) return
+        const list = map.get(id) || []
+        list.push(u.nome)
+        map.set(id, list)
+      }
+
+      registrar(u.delegado)
+      registrar(u.escrivao1)
+      registrar(u.escrivao2)
       for (let i = 1; i <= 8; i++) {
         const agId = (u as Record<string, unknown>)[`agente${i}`] as string | undefined
-        if (agId) map.set(agId, u.nome)
+        registrar(agId)
       }
     }
     return map
@@ -111,6 +136,8 @@ export default function Locacao() {
     setFormDelegado('')
     setFormEscrivaes([])
     setFormAgentes([])
+    setNovoEscrivaoId('')
+    setNovoAgenteId('')
     setFormError('')
     setIsModalOpen(true)
   }
@@ -131,32 +158,70 @@ export default function Locacao() {
       if (agId) ags.push(agId)
     }
     setFormAgentes(ags)
+    setNovoEscrivaoId('')
+    setNovoAgenteId('')
     setFormError('')
     setIsModalOpen(true)
   }
 
-  const toggleEscrivao = (id: string) => {
+  // Adicionar escrivão com confirmação se > 2 (Item 3)
+  const handleAdicionarEscrivao = (id: string) => {
+    if (!id) return
     if (formEscrivaes.includes(id)) {
-      setFormEscrivaes(formEscrivaes.filter((x) => x !== id))
+      toast.info('Este escrivão já está adicionado nesta unidade.')
+      return
+    }
+
+    const operacao = () => {
+      setFormEscrivaes((prev) => [...prev, id])
+      setNovoEscrivaoId('')
+      toast.success('Escrivão adicionado à unidade.')
+    }
+
+    // Se já tiver 2 ou mais escrivães (limite padrão recomendado)
+    if (formEscrivaes.length >= 2) {
+      setMotivoConfirmacao(
+        `A unidade passará a ter ${formEscrivaes.length + 1} escrivães (padrão recomendado: 02).`,
+      )
+      setAcaoConfirmacaoPendente(() => operacao)
+      setModalConfirmacaoExcessoOpen(true)
     } else {
-      if (formEscrivaes.length >= 2) {
-        toast.warning('Limite máximo de 02 Escrivães por unidade atingido.')
-        return
-      }
-      setFormEscrivaes([...formEscrivaes, id])
+      operacao()
     }
   }
 
-  const toggleAgente = (id: string) => {
+  const handleRemoverEscrivao = (id: string) => {
+    setFormEscrivaes((prev) => prev.filter((x) => x !== id))
+  }
+
+  // Adicionar agente com confirmação se > 8 (Item 3)
+  const handleAdicionarAgente = (id: string) => {
+    if (!id) return
     if (formAgentes.includes(id)) {
-      setFormAgentes(formAgentes.filter((x) => x !== id))
-    } else {
-      if (formAgentes.length >= 8) {
-        toast.warning('Limite máximo de 08 Agentes/Investigadores por unidade atingido.')
-        return
-      }
-      setFormAgentes([...formAgentes, id])
+      toast.info('Este agente já está adicionado nesta unidade.')
+      return
     }
+
+    const operacao = () => {
+      setFormAgentes((prev) => [...prev, id])
+      setNovoAgenteId('')
+      toast.success('Agente/Investigador adicionado à unidade.')
+    }
+
+    // Se já tiver 8 ou mais agentes (limite padrão recomendado)
+    if (formAgentes.length >= 8) {
+      setMotivoConfirmacao(
+        `A unidade passará a ter ${formAgentes.length + 1} agentes (padrão recomendado: 08).`,
+      )
+      setAcaoConfirmacaoPendente(() => operacao)
+      setModalConfirmacaoExcessoOpen(true)
+    } else {
+      operacao()
+    }
+  }
+
+  const handleRemoverAgente = (id: string) => {
+    setFormAgentes((prev) => prev.filter((x) => x !== id))
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -169,14 +234,6 @@ export default function Locacao() {
     }
     if (!formDelegado) {
       setFormError('Selecione 01 Delegado Responsável.')
-      return
-    }
-    if (formEscrivaes.length > 2) {
-      setFormError('Permitido no máximo 02 Escrivães por Unidade.')
-      return
-    }
-    if (formAgentes.length > 8) {
-      setFormError('Permitido no máximo 08 Agentes/Investigadores por Unidade.')
       return
     }
 
@@ -238,12 +295,17 @@ export default function Locacao() {
     return servidores.find((s) => s.id === id)?.nome || 'Servidor'
   }
 
+  const getServidor = (id: string | undefined): Servidor | undefined => {
+    if (!id) return undefined
+    return servidores.find((s) => s.id === id)
+  }
+
   // Tabela Consolidada: qual Delegacia cada servidor trabalha
   const tabelaConsolidada = useMemo(() => {
     return servidores
       .map((s) => {
-        // Encontrar unidade em que o servidor está lotado
-        const und = unidades.find((u) => {
+        // Encontrar todas as unidades em que o servidor está lotado (delegados multi-unidade!)
+        const unds = unidades.filter((u) => {
           if (u.delegado === s.id) return true
           if (u.escrivao1 === s.id || u.escrivao2 === s.id) return true
           for (let i = 1; i <= 8; i++) {
@@ -254,8 +316,10 @@ export default function Locacao() {
 
         return {
           servidor: s,
-          unidadeNome: und ? und.nome : 'Sem lotação definida',
-          isLotado: !!und,
+          unidades: unds,
+          unidadeNome:
+            unds.length > 0 ? unds.map((u) => u.nome).join(', ') : 'Sem lotação definida',
+          isLotado: unds.length > 0,
         }
       })
       .sort((a, b) => {
@@ -265,10 +329,14 @@ export default function Locacao() {
       })
   }, [servidores, unidades])
 
+  const handleImprimirExpediente = () => {
+    window.print()
+  }
+
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-[#E5E9F0] shadow-sm">
+      {/* Top Header (Não imprime) */}
+      <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-[#E5E9F0] shadow-sm">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#0B2545] bg-[#F5F7FA] px-2.5 py-0.5 rounded border border-[#E5E9F0]">
@@ -277,21 +345,32 @@ export default function Locacao() {
           </div>
           <h1 className="text-2xl font-bold text-[#0B2545] mt-1.5 flex items-center gap-2">
             <Building2 className="w-6 h-6 text-[#0B2545]" />
-            Lotação das Unidades Policiais
+            Lotação das Unidades Policiais (Expediente)
           </h1>
           <p className="text-xs sm:text-sm text-[#6B7280]">
-            Cadastre as Delegacias/Unidades e vincule o efetivo: 01 Delegado, até 02 Escrivães e até
-            08 Agentes por unidade.
+            Cadastre as Delegacias/Unidades e vincule o efetivo com busca inteligente. Delegados
+            podem ser multi-unidade e o quantitativo é flexível.
           </p>
         </div>
 
-        <Button
-          onClick={handleOpenCreate}
-          className="bg-[#0B2545] hover:bg-[#081A33] text-white font-medium shadow-sm"
-        >
-          <Plus className="w-4 h-4 mr-1.5" />
-          Nova Unidade
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={handleImprimirExpediente}
+            variant="outline"
+            className="border-[#0B2545] text-[#0B2545] hover:bg-[#F5F7FA] font-medium shadow-sm text-xs h-9 flex items-center gap-1.5"
+          >
+            <Printer className="w-4 h-4 text-[#0B2545]" />
+            Imprimir Expediente (A4)
+          </Button>
+
+          <Button
+            onClick={handleOpenCreate}
+            className="bg-[#0B2545] hover:bg-[#081A33] text-white font-medium shadow-sm text-xs h-9 flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Unidade
+          </Button>
+        </div>
       </div>
 
       {/* Grid de Unidades Cadastradas */}
@@ -353,23 +432,38 @@ export default function Locacao() {
                       </Button>
                     </div>
                   </div>
-
                   {/* Detalhe dos servidores lotados */}
                   <div className="space-y-3 pt-3 text-xs">
                     <div>
                       <span className="font-semibold text-[#6B7280] uppercase tracking-wider text-[10px] block">
-                        Delegado Responsável (01):
+                        Delegado(a) Titular / Responsável:
                       </span>
                       <p className="font-semibold text-[#0B2545] mt-0.5 flex items-center gap-1.5">
                         <BrasaoPCPB className="w-3.5 h-auto" />
                         {getNome(u.delegado) || 'Não definido'}
+                        {u.delegado && servidoresLotadosEmOutras.get(u.delegado)?.length ? (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] py-0 px-1.5 border-blue-300 bg-blue-50 text-blue-700 ml-1 font-normal"
+                            title={`Lotado também em: ${servidoresLotadosEmOutras.get(u.delegado)?.join(', ')}`}
+                          >
+                            Multi-Unidade ({servidoresLotadosEmOutras.get(u.delegado)!.length + 1})
+                          </Badge>
+                        ) : null}
                       </p>
                     </div>
 
                     <div>
-                      <span className="font-semibold text-[#6B7280] uppercase tracking-wider text-[10px] block">
-                        Escrivães ({escrivaesList.length}/2):
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-[#6B7280] uppercase tracking-wider text-[10px] block">
+                          Escrivães ({escrivaesList.length}):
+                        </span>
+                        {escrivaesList.length > 2 && (
+                          <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                            Acima do padrão
+                          </span>
+                        )}
+                      </div>
                       {escrivaesList.length === 0 ? (
                         <p className="text-[#6B7280] italic">Nenhum escrivão vinculado</p>
                       ) : (
@@ -388,9 +482,16 @@ export default function Locacao() {
                     </div>
 
                     <div>
-                      <span className="font-semibold text-[#6B7280] uppercase tracking-wider text-[10px] block">
-                        Agentes / Investigadores ({agentesList.length}/8):
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-[#6B7280] uppercase tracking-wider text-[10px] block">
+                          Agentes / Investigadores ({agentesList.length}):
+                        </span>
+                        {agentesList.length > 8 && (
+                          <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                            Acima do padrão
+                          </span>
+                        )}
+                      </div>
                       {agentesList.length === 0 ? (
                         <p className="text-[#6B7280] italic">Nenhum agente vinculado</p>
                       ) : (
@@ -407,7 +508,7 @@ export default function Locacao() {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </div>{' '}
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-[#E5E9F0] text-[11px] text-[#6B7280] flex justify-between items-center">
@@ -485,7 +586,7 @@ export default function Locacao() {
         </div>
       </div>
 
-      {/* Modal Cadastro/Edição de Unidade */}
+      {/* Modal Cadastro/Edição de Unidade com Autocomplete e Quantitativo Flexível */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
           <DialogHeader>
@@ -494,8 +595,8 @@ export default function Locacao() {
               {editingId ? 'Editar Lotação da Unidade' : 'Cadastrar Nova Unidade'}
             </DialogTitle>
             <DialogDescription className="text-xs text-[#6B7280]">
-              Configure a unidade policial respeitando os limites prescritos: 01 Delegado, até 02
-              Escrivães e até 08 Agentes.
+              Configure o efetivo da Delegacia/Unidade. Delegados podem acumular unidades e o
+              quantitativo de escrivães e agentes é flexível mediante confirmação.
             </DialogDescription>
           </DialogHeader>
 
@@ -506,137 +607,197 @@ export default function Locacao() {
             </div>
           )}
 
-          <form onSubmit={handleSave} className="space-y-4 py-2">
+          <form onSubmit={handleSave} className="space-y-4 py-2 text-xs">
+            {/* Nome da Unidade */}
             <div className="space-y-1.5">
               <Label htmlFor="unidadeNome" className="text-xs font-semibold text-[#1F2937]">
-                Nome da Delegacia / Unidade *
+                Nome da Delegacia / Unidade Policial *
               </Label>
               <Input
                 id="unidadeNome"
-                placeholder="Ex.: DEAM, 1ª DD, 2ª DD, GTE..."
+                placeholder="Ex.: 1ª Delegacia Distrital, DEAM, GTE..."
                 value={formNome}
                 onChange={(e) => setFormNome(e.target.value)}
-                className="h-10 border-[#D1D5DB]"
+                className="h-10 border-[#D1D5DB] text-xs"
                 required
               />
             </div>
 
-            {/* Delegado Responsável (01) */}
+            {/* Delegado Responsável (Multi-unidade permitido!) */}
             <div className="space-y-1.5">
-              <Label
-                htmlFor="delegado"
-                className="text-xs font-semibold text-[#1F2937] flex items-center justify-between"
-              >
-                <span>01 Delegado Responsável *</span>
-                <span className="text-[11px] text-[#6B7280]">Obrigatório (limite exato de 01)</span>
-              </Label>
-              <Select value={formDelegado} onValueChange={setFormDelegado}>
-                <SelectTrigger id="delegado" className="h-10 border-[#D1D5DB]">
-                  <SelectValue placeholder="Selecione o Delegado Responsável" />
-                </SelectTrigger>
-                <SelectContent>
-                  {delegadosDisponiveis.map((d) => {
-                    const lotadoEm = servidoresLotadosEmOutras.get(d.id)
-                    const disabled = !!lotadoEm
-                    return (
-                      <SelectItem key={d.id} value={d.id} disabled={disabled}>
-                        {d.nome} {lotadoEm ? `(Já lotado em: ${lotadoEm})` : ''}
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-[#1F2937]">
+                  01 Delegado(a) Titular / Responsável *
+                </Label>
+                <span className="text-[11px] text-emerald-700 font-medium">
+                  Delegados multi-unidade permitidos
+                </span>
+              </div>
+              <ServidorAutocomplete
+                servidores={delegadosDisponiveis}
+                value={formDelegado}
+                onChange={setFormDelegado}
+                placeholder="Buscar delegado por nome ou matrícula..."
+                labelVazio="Selecione o delegado responsável..."
+                filtroCargo="Delegado"
+                warningIds={delegadosDisponiveis
+                  .filter((d) => servidoresLotadosEmOutras.has(d.id))
+                  .map((d) => ({
+                    id: d.id,
+                    motivo: `Também lotado em: ${servidoresLotadosEmOutras.get(d.id)?.join(', ')}`,
+                  }))}
+              />
             </div>
 
-            {/* Escrivães (Até 02) */}
-            <div className="space-y-1.5 pt-2">
-              <Label className="text-xs font-semibold text-[#1F2937] flex items-center justify-between">
-                <span>Escrivães de Polícia (Até 02)</span>
-                <span className="text-[11px] font-bold text-[#0B2545]">
-                  Selecionados: {formEscrivaes.length} / 2
+            {/* Escrivães com Autocomplete + lista de alocados */}
+            <div className="space-y-2 pt-2 border-t border-[#E5E9F0]">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-[#1F2937]">
+                  Escrivães de Polícia ({formEscrivaes.length})
+                </Label>
+                <span className="text-[11px] text-[#6B7280]">
+                  Padrão recomendado: até 02 Escrivães
                 </span>
-              </Label>
-              <div className="border border-[#D1D5DB] rounded-lg p-2.5 max-h-40 overflow-y-auto space-y-1 bg-[#F9FAFB]">
-                {escrivaesDisponiveis.map((esc) => {
-                  const lotadoEm = servidoresLotadosEmOutras.get(esc.id)
-                  const isChecked = formEscrivaes.includes(esc.id)
-                  const disabled = !!lotadoEm
+              </div>
 
-                  return (
-                    <label
-                      key={esc.id}
-                      className={`flex items-center justify-between p-2 rounded text-xs transition-colors cursor-pointer ${
-                        disabled
-                          ? 'opacity-50 cursor-not-allowed bg-gray-100'
-                          : isChecked
-                            ? 'bg-blue-100/70 border border-blue-300'
-                            : 'hover:bg-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          disabled={disabled}
-                          onChange={() => toggleEscrivao(esc.id)}
-                          className="rounded border-gray-300 text-[#0B2545] focus:ring-[#0B2545]"
-                        />
-                        <span className="font-medium text-[#1F2937]">{esc.nome}</span>
-                      </div>
-                      {lotadoEm && (
-                        <span className="text-[10px] text-amber-700 italic">
-                          Lotado em: {lotadoEm}
-                        </span>
-                      )}
-                    </label>
-                  )
-                })}
+              {/* Seletor Autocomplete para adicionar escrivão */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <ServidorAutocomplete
+                    servidores={escrivaesDisponiveis}
+                    value={novoEscrivaoId}
+                    onChange={(id) => {
+                      setNovoEscrivaoId(id)
+                      if (id) handleAdicionarEscrivao(id)
+                    }}
+                    placeholder="Adicionar Escrivão por nome, matrícula..."
+                    filtroCargo="Escrivão"
+                    disabledIds={formEscrivaes}
+                    disabledMessage="Já adicionado nesta unidade"
+                  />
+                </div>
+              </div>
+
+              {/* Chips / Badges de Escrivães Adicionados */}
+              <div className="border border-[#D1D5DB] rounded-lg p-2.5 min-h-16 bg-[#F9FAFB] space-y-1.5">
+                {formEscrivaes.length === 0 ? (
+                  <p className="text-[#9CA3AF] italic text-xs py-1">
+                    Nenhum escrivão vinculado. Use o campo acima para buscar e adicionar.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {formEscrivaes.map((id, idx) => {
+                      const s = getServidor(id)
+                      const isAcima = idx >= 2
+                      return (
+                        <div
+                          key={id}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border ${
+                            isAcima
+                              ? 'bg-amber-50 text-amber-900 border-amber-300'
+                              : 'bg-blue-50 text-[#1D4E89] border-blue-200'
+                          }`}
+                        >
+                          <span className="font-medium">{s?.nome || id}</span>
+                          {s?.matricula && (
+                            <span className="text-[10px] text-gray-500 font-mono">
+                              ({s.matricula})
+                            </span>
+                          )}
+                          {isAcima && (
+                            <span className="text-[9px] bg-amber-200 text-amber-900 px-1 rounded font-bold">
+                              Extra
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoverEscrivao(id)}
+                            className="hover:bg-red-100 hover:text-red-700 rounded p-0.5 ml-1 transition-colors"
+                            title="Remover escrivão"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Agentes / Investigadores (Até 08) */}
-            <div className="space-y-1.5 pt-2">
-              <Label className="text-xs font-semibold text-[#1F2937] flex items-center justify-between">
-                <span>Agentes / Investigadores (Até 08)</span>
-                <span className="text-[11px] font-bold text-[#0B2545]">
-                  Selecionados: {formAgentes.length} / 8
+            {/* Agentes / Investigadores com Autocomplete + lista de alocados */}
+            <div className="space-y-2 pt-2 border-t border-[#E5E9F0]">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-[#1F2937]">
+                  Agentes / Investigadores ({formAgentes.length})
+                </Label>
+                <span className="text-[11px] text-[#6B7280]">
+                  Padrão recomendado: até 08 Agentes
                 </span>
-              </Label>
-              <div className="border border-[#D1D5DB] rounded-lg p-2.5 max-h-52 overflow-y-auto space-y-1 bg-[#F9FAFB]">
-                {agentesDisponiveis.map((ag) => {
-                  const lotadoEm = servidoresLotadosEmOutras.get(ag.id)
-                  const isChecked = formAgentes.includes(ag.id)
-                  const disabled = !!lotadoEm
+              </div>
 
-                  return (
-                    <label
-                      key={ag.id}
-                      className={`flex items-center justify-between p-2 rounded text-xs transition-colors cursor-pointer ${
-                        disabled
-                          ? 'opacity-50 cursor-not-allowed bg-gray-100'
-                          : isChecked
-                            ? 'bg-blue-100/70 border border-blue-300'
-                            : 'hover:bg-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          disabled={disabled}
-                          onChange={() => toggleAgente(ag.id)}
-                          className="rounded border-gray-300 text-[#0B2545] focus:ring-[#0B2545]"
-                        />
-                        <span className="font-medium text-[#1F2937]">{ag.nome}</span>
-                      </div>
-                      {lotadoEm && (
-                        <span className="text-[10px] text-amber-700 italic">
-                          Lotado em: {lotadoEm}
-                        </span>
-                      )}
-                    </label>
-                  )
-                })}
+              {/* Seletor Autocomplete para adicionar agente */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <ServidorAutocomplete
+                    servidores={agentesDisponiveis}
+                    value={novoAgenteId}
+                    onChange={(id) => {
+                      setNovoAgenteId(id)
+                      if (id) handleAdicionarAgente(id)
+                    }}
+                    placeholder="Adicionar Agente/Investigador por nome, matrícula..."
+                    filtroCargo="Agente/Investigador"
+                    disabledIds={formAgentes}
+                    disabledMessage="Já adicionado nesta unidade"
+                  />
+                </div>
+              </div>
+
+              {/* Chips / Badges de Agentes Adicionados */}
+              <div className="border border-[#D1D5DB] rounded-lg p-2.5 min-h-20 bg-[#F9FAFB] space-y-1.5">
+                {formAgentes.length === 0 ? (
+                  <p className="text-[#9CA3AF] italic text-xs py-1">
+                    Nenhum agente vinculado. Use o campo acima para buscar e adicionar.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {formAgentes.map((id, idx) => {
+                      const s = getServidor(id)
+                      const isAcima = idx >= 8
+                      return (
+                        <div
+                          key={id}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border ${
+                            isAcima
+                              ? 'bg-amber-50 text-amber-900 border-amber-300'
+                              : 'bg-white text-gray-800 border-gray-300'
+                          }`}
+                        >
+                          <span className="font-medium">{s?.nome || id}</span>
+                          {s?.matricula && (
+                            <span className="text-[10px] text-gray-500 font-mono">
+                              ({s.matricula})
+                            </span>
+                          )}
+                          {isAcima && (
+                            <span className="text-[9px] bg-amber-200 text-amber-900 px-1 rounded font-bold">
+                              Extra
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoverAgente(id)}
+                            className="hover:bg-red-100 hover:text-red-700 rounded p-0.5 ml-1 transition-colors"
+                            title="Remover agente"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -645,14 +806,14 @@ export default function Locacao() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsModalOpen(false)}
-                className="border-[#D1D5DB]"
+                className="border-[#D1D5DB] text-xs h-9"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={saving}
-                className="bg-[#0B2545] hover:bg-[#081A33] text-white"
+                className="bg-[#0B2545] hover:bg-[#081A33] text-white text-xs h-9"
               >
                 {saving ? 'Salvando...' : editingId ? 'Atualizar Unidade' : 'Cadastrar Unidade'}
               </Button>
@@ -660,6 +821,133 @@ export default function Locacao() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Confirmação quando exceder limites padrão (Item 3 do PRD: "Atenção: Esta unidade já atingiu a quantidade padrão recomendada...") */}
+      <ConfirmacaoOperacionalModal
+        open={modalConfirmacaoExcessoOpen}
+        onOpenChange={setModalConfirmacaoExcessoOpen}
+        onConfirm={() => {
+          if (acaoConfirmacaoPendente) {
+            acaoConfirmacaoPendente()
+            setAcaoConfirmacaoPendente(null)
+          }
+        }}
+        title="Atenção: Esta unidade já atingiu a quantidade padrão recomendada. Você realmente deseja inserir mais um servidor?"
+        consequencia={motivoConfirmacao}
+        confirmText="Sim, adicionar"
+        cancelText="Cancelar"
+      />
+
+      {/* ÁREA DE IMPRESSÃO LIMPA DO EXPEDIENTE (A4 — Item 3) */}
+      <div className="hidden print:block print:p-0 print:border-none print:shadow-none bg-white">
+        {/* Cabeçalho Oficial PCPB */}
+        <div className="border-b-2 border-[#0B2545] pb-4 mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 flex items-center justify-center shrink-0">
+              <BrasaoPCPB className="h-16 w-auto max-w-[64px]" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-[#0B2545] tracking-wider uppercase">
+                POLÍCIA CIVIL DO ESTADO DA PARAÍBA
+              </p>
+              <h2 className="text-base font-bold text-[#0B2545] uppercase tracking-wide leading-tight">
+                20ª DELEGACIA SECCIONAL DE POLÍCIA CIVIL
+              </h2>
+              <p className="text-xs font-semibold text-[#1F2937]">
+                QUADRO GERAL DE LOTAÇÃO E EXPEDIENTE DAS UNIDADES
+              </p>
+              <p className="text-[11px] text-[#6B7280]">
+                Relação consolidada de delegacias e seus efetivos policiais vinculados.
+              </p>
+            </div>
+          </div>
+          <div className="text-right text-[10px] text-[#6B7280]">
+            <p className="font-semibold text-[#0B2545]">Documento de Expediente</p>
+            <p>Emissão: {new Date().toLocaleDateString('pt-BR')}</p>
+          </div>
+        </div>
+
+        {/* Tabela de Unidades e seus Efetivos formatada para folha A4 */}
+        <div className="space-y-4">
+          <table className="w-full border-collapse text-[10px] border border-[#0B2545]">
+            <thead>
+              <tr className="bg-[#0B2545] text-white">
+                <th className="py-2 px-2 border border-[#0B2545] text-left w-36">
+                  DELEGACIA / UNIDADE
+                </th>
+                <th className="py-2 px-2 border border-[#0B2545] text-left w-48">
+                  DELEGADO(A) TITULAR
+                </th>
+                <th className="py-2 px-2 border border-[#0B2545] text-left w-44">ESCRIVÃES</th>
+                <th className="py-2 px-2 border border-[#0B2545] text-left">
+                  AGENTES / INVESTIGADORES
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {unidades.map((u) => {
+                const escList = [u.escrivao1, u.escrivao2].filter(Boolean) as string[]
+                const agList = [
+                  u.agente1,
+                  u.agente2,
+                  u.agente3,
+                  u.agente4,
+                  u.agente5,
+                  u.agente6,
+                  u.agente7,
+                  u.agente8,
+                ].filter(Boolean) as string[]
+
+                return (
+                  <tr key={u.id} className="border-b border-gray-300">
+                    <td className="py-2 px-2 font-bold text-[#0B2545] border-r border-gray-300 align-top">
+                      {u.nome}
+                    </td>
+                    <td className="py-2 px-2 font-semibold text-gray-900 border-r border-gray-300 align-top">
+                      {getNome(u.delegado) || '-'}
+                    </td>
+                    <td className="py-2 px-2 border-r border-gray-300 align-top">
+                      {escList.length === 0 ? (
+                        <span className="text-gray-400 italic">-</span>
+                      ) : (
+                        <ul className="list-disc pl-3 space-y-0.5">
+                          {escList.map((id) => (
+                            <li key={id}>{getNome(id)}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </td>
+                    <td className="py-2 px-2 align-top">
+                      {agList.length === 0 ? (
+                        <span className="text-gray-400 italic">-</span>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                          {agList.map((id) => (
+                            <span key={id}>• {getNome(id)}</span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+
+          {/* Rodapé de Homologação na Impressão */}
+          <div className="mt-8 pt-6 border-t border-gray-300 flex justify-between items-end text-[10px]">
+            <div>
+              <p className="font-semibold text-[#0B2545]">Polícia Civil da Paraíba</p>
+              <p className="text-gray-500">Expediente Oficial das Unidades Policiais</p>
+            </div>
+            <div className="text-center">
+              <div className="w-52 border-b border-black mb-1" />
+              <p className="font-bold text-[#0B2545]">Delegado Seccional de Polícia Civil</p>
+              <p className="text-gray-500">20ª DSPC</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Confirmação Exclusão */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

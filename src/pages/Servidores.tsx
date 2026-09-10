@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Users, Plus, Search, Edit2, Trash2, Phone, ShieldCheck, AlertCircle } from 'lucide-react'
+import {
+  Users,
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Phone,
+  ShieldCheck,
+  AlertCircle,
+  Mail,
+  Calendar,
+  CreditCard,
+  Hash,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,9 +44,21 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { servidoresService } from '@/services/policeServices'
-import type { Servidor, CargoServidor, StatusServidor } from '@/types/police'
+import type { Servidor, CargoServidor, StatusServidor, DiaCompensacao } from '@/types/police'
 import { formatarTelefone } from '@/lib/escalaRules'
+import { formatarCpf, validarCpf, validarEmail } from '@/lib/cpfValidation'
 import useRealtime from '@/hooks/use-realtime'
+
+const DIAS_COMPENSACAO_OPCOES: DiaCompensacao[] = [
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado',
+  'Domingo',
+  'Rotativo',
+]
 
 export default function Servidores() {
   const [servidores, setServidores] = useState<Servidor[]>([])
@@ -51,6 +76,10 @@ export default function Servidores() {
   const [formCargo, setFormCargo] = useState<CargoServidor>('Agente/Investigador')
   const [formTelefone, setFormTelefone] = useState('')
   const [formStatus, setFormStatus] = useState<StatusServidor>('Ativo')
+  const [formMatricula, setFormMatricula] = useState('')
+  const [formCpf, setFormCpf] = useState('')
+  const [formEmail, setFormEmail] = useState('')
+  const [formDiaCompensacao, setFormDiaCompensacao] = useState<string>('Rotativo')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
 
@@ -85,6 +114,10 @@ export default function Servidores() {
     setFormCargo('Agente/Investigador')
     setFormTelefone('')
     setFormStatus('Ativo')
+    setFormMatricula('')
+    setFormCpf('')
+    setFormEmail('')
+    setFormDiaCompensacao('Rotativo')
     setFormError('')
     setIsModalOpen(true)
   }
@@ -95,6 +128,10 @@ export default function Servidores() {
     setFormCargo(s.cargo)
     setFormTelefone(s.telefone)
     setFormStatus(s.status)
+    setFormMatricula(s.matricula || '')
+    setFormCpf(s.cpf ? formatarCpf(s.cpf) : '')
+    setFormEmail(s.email || '')
+    setFormDiaCompensacao(s.dia_compensacao || 'Rotativo')
     setFormError('')
     setIsModalOpen(true)
   }
@@ -112,23 +149,40 @@ export default function Servidores() {
       return
     }
 
+    // Validação de CPF se preenchido
+    if (formCpf.trim()) {
+      if (!validarCpf(formCpf)) {
+        setFormError('O CPF informado é inválido. Verifique os dígitos digitados.')
+        toast.error('CPF inválido.')
+        return
+      }
+    }
+
+    // Validação de E-mail se preenchido
+    if (formEmail.trim() && !validarEmail(formEmail)) {
+      setFormError('Informe um endereço de e-mail válido (ex: servidor@policiacivil.pb.gov.br).')
+      toast.error('E-mail inválido.')
+      return
+    }
+
+    const payload = {
+      nome: formNome.trim(),
+      cargo: formCargo,
+      telefone: formTelefone.trim(),
+      status: formStatus,
+      matricula: formMatricula.trim() || undefined,
+      cpf: formCpf.trim() ? formatarCpf(formCpf) : undefined,
+      email: formEmail.trim() || undefined,
+      dia_compensacao: formDiaCompensacao || 'Rotativo',
+    }
+
     try {
       setSaving(true)
       if (editingId) {
-        await servidoresService.update(editingId, {
-          nome: formNome.trim(),
-          cargo: formCargo,
-          telefone: formTelefone.trim(),
-          status: formStatus,
-        })
+        await servidoresService.update(editingId, payload)
         toast.success('Servidor atualizado com sucesso!')
       } else {
-        await servidoresService.create({
-          nome: formNome.trim(),
-          cargo: formCargo,
-          telefone: formTelefone.trim(),
-          status: formStatus,
-        })
+        await servidoresService.create(payload)
         toast.success('Servidor cadastrado com sucesso!')
       }
       setIsModalOpen(false)
@@ -162,9 +216,15 @@ export default function Servidores() {
   }
 
   const servidoresFiltrados = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim()
     return servidores.filter((s) => {
       const matchSearch =
-        s.nome.toLowerCase().includes(searchTerm.toLowerCase()) || s.telefone.includes(searchTerm)
+        !term ||
+        s.nome.toLowerCase().includes(term) ||
+        s.telefone.includes(term) ||
+        (s.matricula && s.matricula.toLowerCase().includes(term)) ||
+        (s.cpf && s.cpf.replace(/\D/g, '').includes(term.replace(/\D/g, ''))) ||
+        (s.email && s.email.toLowerCase().includes(term))
       const matchCargo = filtroCargo === 'todos' || s.cargo === filtroCargo
       const matchStatus = filtroStatus === 'todos' || s.status === filtroStatus
       return matchSearch && matchCargo && matchStatus
@@ -205,7 +265,7 @@ export default function Servidores() {
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-[#6B7280] absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
-            placeholder="Buscar por nome ou telefone..."
+            placeholder="Buscar por nome, cargo, matrícula ou CPF..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 h-10 border-[#D1D5DB]"
@@ -245,8 +305,11 @@ export default function Servidores() {
             <thead>
               <tr className="bg-[#F5F7FA] border-b border-[#E5E9F0] text-[#0B2545] font-semibold text-xs uppercase tracking-wider">
                 <th className="py-3.5 px-4">Nome Completo</th>
+                <th className="py-3.5 px-4">Matrícula</th>
+                <th className="py-3.5 px-4">CPF</th>
                 <th className="py-3.5 px-4">Cargo / Função</th>
                 <th className="py-3.5 px-4">Telefone / WhatsApp</th>
+                <th className="py-3.5 px-4">Compensação</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-right">Ações</th>
               </tr>
@@ -254,13 +317,13 @@ export default function Servidores() {
             <tbody className="divide-y divide-[#E5E9F0]">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[#6B7280]">
+                  <td colSpan={8} className="py-8 text-center text-[#6B7280]">
                     Carregando servidores...
                   </td>
                 </tr>
               ) : servidoresFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[#6B7280]">
+                  <td colSpan={8} className="py-8 text-center text-[#6B7280]">
                     Nenhum servidor encontrado com os filtros aplicados.
                   </td>
                 </tr>
@@ -278,9 +341,26 @@ export default function Servidores() {
                           {s.nome.slice(0, 1)}
                         </div>
                         <div>
-                          <span>{s.nome}</span>
+                          <span className="font-semibold">{s.nome}</span>
+                          {s.email && (
+                            <span className="text-[11px] text-[#6B7280] block truncate max-w-[180px]">
+                              {s.email}
+                            </span>
+                          )}
                         </div>
                       </div>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-xs text-[#0B2545]">
+                      {s.matricula ? (
+                        <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-semibold">
+                          {s.matricula}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 italic">-</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-xs text-[#1F2937]">
+                      {s.cpf ? formatarCpf(s.cpf) : <span className="text-gray-400 italic">-</span>}
                     </td>
                     <td className="py-3 px-4">
                       <Badge
@@ -300,6 +380,12 @@ export default function Servidores() {
                       <span className="flex items-center gap-1.5">
                         <Phone className="w-3.5 h-3.5 text-[#6B7280]" />
                         {s.telefone}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-xs text-[#1F2937]">
+                      <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-medium">
+                        <Calendar className="w-3 h-3 text-amber-700" />
+                        {s.dia_compensacao || 'Rotativo'}
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -357,14 +443,15 @@ export default function Servidores() {
 
       {/* Modal Cadastro/Edição */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md bg-white">
+        <DialogContent className="max-w-lg bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-[#0B2545] flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-[#0B2545]" />
               {editingId ? 'Editar Servidor' : 'Cadastrar Novo Servidor'}
             </DialogTitle>
             <DialogDescription className="text-xs text-[#6B7280]">
-              Preencha os dados do servidor policial para compor as escalas e lotações.
+              Preencha os dados cadastrais e funcionais do servidor policial para compor as escalas
+              e lotações.
             </DialogDescription>
           </DialogHeader>
 
@@ -375,8 +462,9 @@ export default function Servidores() {
             </div>
           )}
 
-          <form onSubmit={handleSave} className="space-y-4 py-2">
-            <div className="space-y-1.5">
+          <form onSubmit={handleSave} className="space-y-3.5 py-1 text-xs">
+            {/* Nome Completo */}
+            <div className="space-y-1">
               <Label htmlFor="nome" className="text-xs font-semibold text-[#1F2937]">
                 Nome Completo *
               </Label>
@@ -385,72 +473,168 @@ export default function Servidores() {
                 placeholder="Ex.: Carlos Eduardo Andrade"
                 value={formNome}
                 onChange={(e) => setFormNome(e.target.value)}
-                className="h-10 border-[#D1D5DB]"
+                className="h-9 border-[#D1D5DB] text-xs"
                 required
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="cargo" className="text-xs font-semibold text-[#1F2937]">
-                Cargo / Função *
-              </Label>
-              <Select value={formCargo} onValueChange={(val) => setFormCargo(val as CargoServidor)}>
-                <SelectTrigger id="cargo" className="h-10 border-[#D1D5DB]">
-                  <SelectValue placeholder="Selecione o cargo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Delegado">Delegado</SelectItem>
-                  <SelectItem value="Escrivão">Escrivão</SelectItem>
-                  <SelectItem value="Agente/Investigador">Agente/Investigador</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Matrícula e CPF lado a lado */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label
+                  htmlFor="matricula"
+                  className="text-xs font-semibold text-[#1F2937] flex items-center gap-1"
+                >
+                  <Hash className="w-3 h-3 text-[#6B7280]" />
+                  Matrícula Funcional
+                </Label>
+                <Input
+                  id="matricula"
+                  placeholder="Ex.: 123.456-7"
+                  value={formMatricula}
+                  onChange={(e) => setFormMatricula(e.target.value)}
+                  className="h-9 border-[#D1D5DB] font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label
+                  htmlFor="cpf"
+                  className="text-xs font-semibold text-[#1F2937] flex items-center gap-1"
+                >
+                  <CreditCard className="w-3 h-3 text-[#6B7280]" />
+                  CPF (000.000.000-00)
+                </Label>
+                <Input
+                  id="cpf"
+                  placeholder="000.000.000-00"
+                  value={formCpf}
+                  onChange={(e) => setFormCpf(formatarCpf(e.target.value))}
+                  maxLength={14}
+                  className="h-9 border-[#D1D5DB] font-mono text-xs"
+                />
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="telefone" className="text-xs font-semibold text-[#1F2937]">
-                Telefone / WhatsApp com DDD *
-              </Label>
-              <Input
-                id="telefone"
-                placeholder="(83) 99999-9999"
-                value={formTelefone}
-                onChange={(e) => setFormTelefone(formatarTelefone(e.target.value))}
-                className="h-10 border-[#D1D5DB] font-mono text-sm"
-                required
-              />
+            {/* Cargo e Status */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="cargo" className="text-xs font-semibold text-[#1F2937]">
+                  Cargo / Função *
+                </Label>
+                <Select
+                  value={formCargo}
+                  onValueChange={(val) => setFormCargo(val as CargoServidor)}
+                >
+                  <SelectTrigger id="cargo" className="h-9 border-[#D1D5DB] text-xs">
+                    <SelectValue placeholder="Selecione o cargo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Delegado">Delegado</SelectItem>
+                    <SelectItem value="Escrivão">Escrivão</SelectItem>
+                    <SelectItem value="Agente/Investigador">Agente/Investigador</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="status" className="text-xs font-semibold text-[#1F2937]">
+                  Status Operacional
+                </Label>
+                <Select
+                  value={formStatus}
+                  onValueChange={(val) => setFormStatus(val as StatusServidor)}
+                >
+                  <SelectTrigger id="status" className="h-9 border-[#D1D5DB] text-xs">
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ativo">Ativo (Disponível)</SelectItem>
+                    <SelectItem value="Inativo">Inativo (Afastado)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="status" className="text-xs font-semibold text-[#1F2937]">
-                Status Operacional
-              </Label>
-              <Select
-                value={formStatus}
-                onValueChange={(val) => setFormStatus(val as StatusServidor)}
+            {/* Telefone e E-mail */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label
+                  htmlFor="telefone"
+                  className="text-xs font-semibold text-[#1F2937] flex items-center gap-1"
+                >
+                  <Phone className="w-3 h-3 text-[#6B7280]" />
+                  Telefone / WhatsApp *
+                </Label>
+                <Input
+                  id="telefone"
+                  placeholder="(83) 99999-9999"
+                  value={formTelefone}
+                  onChange={(e) => setFormTelefone(formatarTelefone(e.target.value))}
+                  className="h-9 border-[#D1D5DB] font-mono text-xs"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label
+                  htmlFor="email"
+                  className="text-xs font-semibold text-[#1F2937] flex items-center gap-1"
+                >
+                  <Mail className="w-3 h-3 text-[#6B7280]" />
+                  E-mail Funcional
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nome.sobrenome@policiacivil.pb.gov.br"
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  className="h-9 border-[#D1D5DB] text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Dia de Compensação */}
+            <div className="space-y-1">
+              <Label
+                htmlFor="diaCompensacao"
+                className="text-xs font-semibold text-[#1F2937] flex items-center gap-1"
               >
-                <SelectTrigger id="status" className="h-10 border-[#D1D5DB]">
-                  <SelectValue placeholder="Selecione o status" />
+                <Calendar className="w-3 h-3 text-[#6B7280]" />
+                Dia de Folga Compensatória
+              </Label>
+              <Select value={formDiaCompensacao} onValueChange={setFormDiaCompensacao}>
+                <SelectTrigger id="diaCompensacao" className="h-9 border-[#D1D5DB] text-xs">
+                  <SelectValue placeholder="Selecione o dia de compensação" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Ativo">Ativo (Disponível para escalas)</SelectItem>
-                  <SelectItem value="Inativo">Inativo (Afastado/Licença)</SelectItem>
+                  {DIAS_COMPENSACAO_OPCOES.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d} {d === 'Rotativo' ? '(Sem dia fixo)' : '(Fixo semanal)'}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-[#6B7280]">
+                Indica o dia padrão de compensação/folga do servidor pelas horas de plantão
+                prestadas.
+              </p>
             </div>
 
-            <DialogFooter className="pt-3">
+            <DialogFooter className="pt-3 border-t border-[#E5E9F0]">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsModalOpen(false)}
-                className="border-[#D1D5DB] text-[#1F2937]"
+                className="border-[#D1D5DB] text-[#1F2937] h-9 text-xs"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={saving}
-                className="bg-[#0B2545] hover:bg-[#081A33] text-white"
+                className="bg-[#0B2545] hover:bg-[#081A33] text-white h-9 text-xs"
               >
                 {saving ? 'Salvando...' : editingId ? 'Salvar Alterações' : 'Cadastrar Servidor'}
               </Button>
