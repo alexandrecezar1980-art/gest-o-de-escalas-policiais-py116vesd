@@ -123,6 +123,9 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
+            {/* Atalho para Atribuições dos Plantonistas (Redireciona para /relatorio#atribuicoes) */}
+            <Route path="/atribuicoes" element={<Navigate to="/relatorio#atribuicoes" replace />} />
           </Route>
 
           {/* 404 Not Found */}

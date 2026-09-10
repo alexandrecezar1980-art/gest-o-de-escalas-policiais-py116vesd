@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   FileSpreadsheet,
   Printer,
@@ -35,6 +36,7 @@ import useRealtime from '@/hooks/use-realtime'
 
 export default function Relatorio() {
   const { isAdmin } = useAuth()
+  const location = useLocation()
 
   const now = useMemo(() => new Date(), [])
   const [mes, setMes] = useState<number>(now.getMonth() + 1)
@@ -83,6 +85,17 @@ export default function Relatorio() {
   useEffect(() => {
     carregarDados()
   }, [carregarDados])
+
+  useEffect(() => {
+    if (location.hash === '#atribuicoes') {
+      setTimeout(() => {
+        const el = document.getElementById('atribuicoes')
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 250)
+    }
+  }, [location.hash, loading])
 
   useRealtime('escalas', () => carregarDados())
   useRealtime('atribuicoes', () => carregarDados())
@@ -378,7 +391,7 @@ export default function Relatorio() {
         </div>
 
         {/* SEÇÃO: ATRIBUIÇÕES DOS PLANTONISTAS (EDITÁVEL PELO ADMIN, EXIBIDO NA IMPRESSÃO) */}
-        <div className="mt-6 pt-4 border-t-2 border-[#0B2545]">
+        <div id="atribuicoes" className="mt-6 pt-4 border-t-2 border-[#0B2545] scroll-mt-20">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs sm:text-sm font-bold text-[#0B2545] uppercase tracking-wider flex items-center gap-1.5">
               <FileText className="w-4 h-4 text-[#0B2545]" />

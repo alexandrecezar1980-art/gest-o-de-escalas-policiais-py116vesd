@@ -11,6 +11,7 @@ import {
   Car,
   Clock,
   FileSpreadsheet,
+  FileText,
   LogOut,
   LogIn,
   Menu,
@@ -44,11 +45,17 @@ export default function Layout() {
     { label: 'Servidores', to: '/servidores', icon: Users, adminOnly: true },
     { label: 'Lotação', to: '/locacao', icon: Building2, adminOnly: true },
     { label: 'Férias', to: '/ferias', icon: CalendarDays, adminOnly: true },
-    { label: 'Escala Mensal', to: '/escala-mensal', icon: CalendarCheck2, adminOnly: true },
-    { label: 'Delegados', to: '/escala-delegados', icon: UserCheck, adminOnly: false },
-    { label: 'Custódias', to: '/escala-custodias', icon: Car, adminOnly: true },
-    { label: 'Permanência', to: '/permanencia', icon: Clock, adminOnly: true },
+    {
+      label: 'Escala Mensal',
+      to: isAdmin ? '/escala-mensal' : '/escala-publica',
+      icon: CalendarCheck2,
+      adminOnly: false,
+    },
     { label: 'Relatório', to: '/relatorio', icon: FileSpreadsheet, adminOnly: false },
+    { label: 'Atribuições', to: '/relatorio#atribuicoes', icon: FileText, adminOnly: false },
+    { label: 'Escala de Delegados', to: '/escala-delegados', icon: UserCheck, adminOnly: false },
+    { label: 'Escala de Custódias', to: '/escala-custodias', icon: Car, adminOnly: true },
+    { label: 'Permanência', to: '/permanencia', icon: Clock, adminOnly: true },
   ]
 
   const visibleNavItems = navItems.filter((item) => {
@@ -86,7 +93,7 @@ export default function Layout() {
       <header className="no-print sticky top-0 z-40 bg-white border-b border-[#E5E9F0] shadow-sm backdrop-blur-md bg-white/95">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo Brand */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
               onClick={() => navigate(isAdmin ? '/' : '/escala-publica')}
@@ -95,22 +102,38 @@ export default function Layout() {
               <div className="h-11 w-10 flex items-center justify-center transition-transform group-hover:scale-105">
                 <BrasaoPCPB className="h-10 w-auto max-w-[40px] drop-shadow-sm" />
               </div>
-              <div>
-                <h1 className="font-bold text-base sm:text-lg text-[#0B2545] leading-tight flex items-center gap-1.5">
-                  <br />
+              <div className="hidden sm:block">
+                <h1 className="font-bold text-base text-[#0B2545] leading-tight flex items-center gap-1.5">
+                  20ª DSPC
                 </h1>
-                <p className="text-xs text-[#6B7280] hidden sm:block">
-                  <br />
-                </p>
+                <p className="text-[11px] text-[#6B7280]">Gestão de Escalas Policiais</p>
               </div>
             </button>
           </div>
 
           {/* Desktop Nav Items */}
-          <nav className="hidden md:flex items-center gap-1">
-            <br />
+          <nav className="hidden lg:flex items-center gap-1 overflow-x-auto py-1 max-w-[calc(100vw-360px)] no-scrollbar">
+            {visibleNavItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  className={({ isActive }) =>
+                    `flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+                      isActive
+                        ? 'bg-[#0B2545] text-white shadow-xs font-semibold'
+                        : 'text-[#4B5563] hover:text-[#0B2545] hover:bg-[#F5F7FA]'
+                    }`
+                  }
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{item.label}</span>
+                </NavLink>
+              )
+            })}
           </nav>
-
           {/* User Section & Mobile Trigger */}
           <div className="flex items-center gap-2">
             {isAdmin ? (
@@ -173,7 +196,7 @@ export default function Layout() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-[#0B2545]"
+              className="lg:hidden text-[#0B2545]"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Abrir Menu"
             >
@@ -184,7 +207,7 @@ export default function Layout() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[#E5E9F0] bg-white px-4 pt-2 pb-6 space-y-1 animate-fade-in-down shadow-lg">
+          <div className="lg:hidden border-t border-[#E5E9F0] bg-white px-4 pt-2 pb-6 space-y-1 animate-fade-in-down shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto">
             {visibleNavItems.map((item) => {
               const Icon = item.icon
               return (
@@ -207,22 +230,7 @@ export default function Layout() {
               )
             })}
 
-            {!isAdmin && (
-              <NavLink
-                to="/escala-publica"
-                onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium ${
-                    isActive
-                      ? 'bg-[#0B2545] text-white'
-                      : 'text-[#1F2937] hover:bg-[#F5F7FA] hover:text-[#0B2545]'
-                  }`
-                }
-              >
-                <CalendarCheck2 className="w-5 h-5" />
-                Escala Pública (Visitante)
-              </NavLink>
-            )}
+
 
             <div className="pt-3 border-t border-[#E5E9F0] mt-2">
               {isAdmin ? (
