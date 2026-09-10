@@ -71,7 +71,9 @@ export default function Login() {
             <BrasaoPCPB className="w-20 sm:w-24 h-auto max-h-28 drop-shadow-md" />
           </div>
           <h1 className="text-2xl font-bold text-[#0B2545] tracking-tight">
-            Gestão de Escalas Policiais
+            Gestão de Escalas
+            <br />
+            20ª DSPC
           </h1>
           <p className="text-sm text-[#6B7280] mt-1">
             Polícia Civil da Paraíba • Acesso ao Sistema Operacional
@@ -144,13 +146,9 @@ export default function Login() {
 
             {/* Credenciais preenchidas informadas ao usuário */}
             <div className="rounded-md bg-[#F5F7FA] border border-[#E5E9F0] p-2.5 text-xs text-[#6B7280]">
-              <div className="flex items-center gap-1.5 text-[#0B2545] font-medium mb-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                Credencial Padrão Inicial (Admin):
+              <div className="flex items-center gap-1.5 text-[#0B2545] font-medium mb-1 text-center">
+                <span>USO RESTRITO A POLÍCIA CIVIL - 20ª DELEGACIA SECCIONAL</span>
               </div>
-              <p className="font-mono text-[11px] text-[#1F2937]">
-                alexandrecezar1980@gmail.com / Skip@Pass
-              </p>
             </div>
 
             <Button
