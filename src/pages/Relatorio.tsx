@@ -391,7 +391,10 @@ export default function Relatorio() {
         </div>
 
         {/* SEÇÃO: ATRIBUIÇÕES DOS PLANTONISTAS (EDITÁVEL PELO ADMIN, EXIBIDO NA IMPRESSÃO) */}
-        <div id="atribuicoes" className="mt-6 pt-4 border-t-2 border-[#0B2545] scroll-mt-20">
+        <div
+          id="atribuicoes"
+          className="mt-6 pt-4 border-t-2 border-[#0B2545] scroll-mt-20 break-inside-avoid print:break-inside-avoid"
+        >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs sm:text-sm font-bold text-[#0B2545] uppercase tracking-wider flex items-center gap-1.5">
               <FileText className="w-4 h-4 text-[#0B2545]" />
@@ -413,7 +416,7 @@ export default function Relatorio() {
           </div>
 
           {/* Campo Rich Text Editável pelo Admin ou Exibido como Leitura */}
-          <div className="print:text-[10px]">
+          <div className="print:text-[10px] print:overflow-visible print:h-auto">
             <RichTextEditor
               value={atribuicoesTexto}
               onChange={setAtribuicoesTexto}
@@ -422,7 +425,7 @@ export default function Relatorio() {
           </div>
 
           {/* Assinaturas para Impressão */}
-          <div className="mt-12 pt-8 border-t border-[#D1D5DB] grid grid-cols-2 gap-8 text-center text-xs print:grid">
+          <div className="mt-12 pt-8 border-t border-[#D1D5DB] grid grid-cols-2 gap-8 text-center text-xs print:grid break-inside-avoid print:break-inside-avoid">
             <div>
               <div className="border-t border-[#1F2937] pt-1 w-3/4 mx-auto font-semibold text-[#0B2545]">
                 Dr. Antonio Luiz Barbosa Netto

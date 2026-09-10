@@ -387,7 +387,7 @@ export default function EscalaPermanencia() {
             return (
               <div
                 key={grupo.diaSemanaIndice}
-                className="bg-white rounded-xl border border-[#E5E9F0] shadow-sm overflow-hidden"
+                className="bg-white rounded-xl border border-[#E5E9F0] shadow-sm"
               >
                 {/* Cabeçalho do Grupo por Dia da Semana */}
                 <div className="bg-[#F5F7FA] border-b border-[#E5E9F0] px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -422,7 +422,7 @@ export default function EscalaPermanencia() {
                     return (
                       <div
                         key={dia}
-                        className={`p-3.5 rounded-lg border transition-all ${
+                        className={`relative p-3.5 rounded-lg border transition-all ${
                           isIncomplete
                             ? 'bg-[#FFFDF5] border-amber-300'
                             : 'bg-white border-[#E5E9F0] hover:border-slate-300'

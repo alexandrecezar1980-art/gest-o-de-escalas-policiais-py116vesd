@@ -36,6 +36,7 @@ export function ServidorAutocomplete({
   warningIds = [],
 }: ServidorAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [openUpwards, setOpenUpwards] = useState(false)
   const [busca, setBusca] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -86,6 +87,19 @@ export function ServidorAutocomplete({
 
   const handleOpen = () => {
     if (disabled) return
+
+    // Verifica espaço na tela para abrir para cima se estiver no final do container/viewport
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      // Se tiver menos de 280px abaixo e houver mais espaço acima, abre para cima
+      if (spaceBelow < 280 && rect.top > spaceBelow) {
+        setOpenUpwards(true)
+      } else {
+        setOpenUpwards(false)
+      }
+    }
+
     setIsOpen(true)
     setTimeout(() => {
       inputRef.current?.focus()
@@ -187,7 +201,11 @@ export function ServidorAutocomplete({
 
       {/* Popover flutuante com campo de busca e lista */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white rounded-lg border border-[#D1D5DB] shadow-lg overflow-hidden animate-in fade-in-0 zoom-in-95 duration-100 min-w-[280px]">
+        <div
+          className={`absolute z-[9999] left-0 right-0 bg-white rounded-lg border border-[#D1D5DB] shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-100 min-w-[280px] ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
+        >
           {/* Input de busca */}
           <div className="p-2 border-b border-[#E5E9F0] bg-[#F5F7FA]">
             <div className="relative">

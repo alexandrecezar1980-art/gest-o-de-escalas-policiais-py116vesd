@@ -393,11 +393,11 @@ export default function EscalaPublica() {
           </div>
 
           {/* Atribuições dos Plantonistas (Somente Leitura) */}
-          <div className="mt-6 pt-4 border-t-2 border-[#0B2545]">
+          <div className="mt-6 pt-4 border-t-2 border-[#0B2545] break-inside-avoid print:break-inside-avoid">
             <h3 className="text-xs sm:text-sm font-bold text-[#0B2545] uppercase tracking-wider mb-2">
               ATRIBUIÇÕES DOS PLANTONISTAS
             </h3>
-            <div className="print:text-[10px]">
+            <div className="print:text-[10px] print:overflow-visible print:h-auto">
               <RichTextEditor value={atribuicoesTexto} onChange={() => {}} disabled={true} />
             </div>
           </div>

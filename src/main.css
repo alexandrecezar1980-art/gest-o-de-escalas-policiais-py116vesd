@@ -165,6 +165,20 @@
   .print-landscape {
     page: page-landscape;
   }
+
+  /* Impressão sem barras de rolagem, overflow visível e altura dinâmica */
+  .prose,
+  [contenteditable] {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Evita corte indevido de blocos de texto ou assinaturas na impressão */
+  .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
 }
 
 @layer utilities {
