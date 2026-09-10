@@ -104,9 +104,11 @@ export default function Layout() {
               </div>
               <div className="hidden sm:block">
                 <h1 className="font-bold text-base text-[#0B2545] leading-tight flex items-center gap-1.5">
-                  20ª DSPC
+                  <br />
                 </h1>
-                <p className="text-[11px] text-[#6B7280]">Gestão de Escalas Policiais</p>
+                <p className="text-[11px] text-[#6B7280]">
+                  <br />
+                </p>
               </div>
             </button>
           </div>
