@@ -138,6 +138,14 @@
 
 @media print {
   @page {
+    size: auto;
+    margin: 10mm;
+  }
+  @page page-portrait {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  @page page-landscape {
     size: A4 landscape;
     margin: 10mm;
   }
@@ -150,6 +158,12 @@
   }
   .print-only {
     display: block !important;
+  }
+  .print-portrait {
+    page: page-portrait;
+  }
+  .print-landscape {
+    page: page-landscape;
   }
 }
 

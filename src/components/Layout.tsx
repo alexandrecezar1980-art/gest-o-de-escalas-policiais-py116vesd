@@ -8,6 +8,9 @@ import {
   Building2,
   CalendarDays,
   CalendarCheck2,
+  UserCheck,
+  Car,
+  Clock,
   FileSpreadsheet,
   LogOut,
   LogIn,
@@ -42,6 +45,9 @@ export default function Layout() {
     { label: 'Lotação', to: '/locacao', icon: Building2, adminOnly: true },
     { label: 'Férias', to: '/ferias', icon: CalendarDays, adminOnly: true },
     { label: 'Escala Mensal', to: '/escala-mensal', icon: CalendarCheck2, adminOnly: true },
+    { label: 'Delegados', to: '/escala-delegados', icon: UserCheck, adminOnly: false },
+    { label: 'Custódias', to: '/escala-custodias', icon: Car, adminOnly: true },
+    { label: 'Permanência', to: '/permanencia', icon: Clock, adminOnly: true },
     { label: 'Relatório', to: '/relatorio', icon: FileSpreadsheet, adminOnly: false },
   ]
 

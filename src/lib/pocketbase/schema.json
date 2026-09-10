@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T00:14:06.357Z",
+  "generatedAt": "2026-09-10T00:22:28.015Z",
   "collections": [
     {
       "name": "users",
@@ -454,6 +454,147 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_atribuicoes_mes_ano ON atribuicoes (mes, ano)"]
+    },
+    {
+      "name": "custodias",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "mes",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ano",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "dia",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "viatura",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "agente1",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente2",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente3",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "observacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_custodias_mes_ano_dia ON custodias (mes, ano, dia)"]
+    },
+    {
+      "name": "permanencias",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "mes",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ano",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "dia",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "agente1",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente2",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_permanencias_mes_ano_dia ON permanencias (mes, ano, dia)"
+      ]
     }
   ]
 }

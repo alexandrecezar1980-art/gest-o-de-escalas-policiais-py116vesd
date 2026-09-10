@@ -100,3 +100,37 @@ export interface Atribuicoes {
   created: string
   updated: string
 }
+
+export interface Custodia {
+  id: string
+  mes: number
+  ano: number
+  dia: number
+  viatura: string
+  agente1?: string | null
+  agente2?: string | null
+  agente3?: string | null
+  observacao?: string | null
+  created: string
+  updated: string
+  expand?: {
+    agente1?: Servidor
+    agente2?: Servidor
+    agente3?: Servidor
+  }
+}
+
+export interface Permanencia {
+  id: string
+  mes: number
+  ano: number
+  dia: number
+  agente1?: string | null
+  agente2?: string | null
+  created: string
+  updated: string
+  expand?: {
+    agente1?: Servidor
+    agente2?: Servidor
+  }
+}

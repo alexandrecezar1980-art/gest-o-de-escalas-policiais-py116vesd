@@ -12,6 +12,9 @@ import Servidores from '@/pages/Servidores'
 import Locacao from '@/pages/Locacao'
 import Ferias from '@/pages/Ferias'
 import EscalaMensal from '@/pages/EscalaMensal'
+import EscalaDelegados from '@/pages/EscalaDelegados'
+import EscalaCustodias from '@/pages/EscalaCustodias'
+import EscalaPermanencia from '@/pages/EscalaPermanencia'
 import Relatorio from '@/pages/Relatorio'
 import EscalaPublica from '@/pages/EscalaPublica'
 import NotFound from '@/pages/NotFound'
@@ -77,6 +80,36 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <EscalaMensal />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Escala de Delegados (Admin + Visitante) */}
+            <Route
+              path="/escala-delegados"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'visitor']}>
+                  <EscalaDelegados />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Escala de Custódias (Admin) */}
+            <Route
+              path="/escala-custodias"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <EscalaCustodias />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Escala de Permanência (Admin) */}
+            <Route
+              path="/permanencia"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <EscalaPermanencia />
                 </ProtectedRoute>
               }
             />

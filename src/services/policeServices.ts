@@ -1,5 +1,14 @@
 import pb from '@/lib/pocketbase/client'
-import type { Servidor, Unidade, Ferias, Feriado, Escala, Atribuicoes } from '@/types/police'
+import type {
+  Servidor,
+  Unidade,
+  Ferias,
+  Feriado,
+  Escala,
+  Atribuicoes,
+  Custodia,
+  Permanencia,
+} from '@/types/police'
 
 export const servidoresService = {
   async getAll(): Promise<Servidor[]> {
@@ -238,5 +247,101 @@ export const atribuicoesService = {
       return pb.collection('atribuicoes').update<Atribuicoes>(existing.id, { conteudo })
     }
     return pb.collection('atribuicoes').create<Atribuicoes>({ mes, ano, conteudo })
+  },
+}
+
+export const custodiasService = {
+  async getByMesAno(mes: number, ano: number): Promise<Custodia[]> {
+    return pb.collection('custodias').getFullList<Custodia>({
+      filter: `mes = ${mes} && ano = ${ano}`,
+      sort: 'dia',
+      expand: 'agente1,agente2,agente3',
+    })
+  },
+
+  async upsertDia(data: {
+    mes: number
+    ano: number
+    dia: number
+    viatura: string
+    agente1?: string | null
+    agente2?: string | null
+    agente3?: string | null
+    observacao?: string | null
+  }): Promise<Custodia> {
+    const list = await pb.collection('custodias').getFullList<Custodia>({
+      filter: `mes = ${data.mes} && ano = ${data.ano} && dia = ${data.dia}`,
+    })
+
+    const payload = {
+      mes: data.mes,
+      ano: data.ano,
+      dia: data.dia,
+      viatura: data.viatura || 'S10 COM XADREZ',
+      agente1: data.agente1 || null,
+      agente2: data.agente2 || null,
+      agente3: data.agente3 || null,
+      observacao: data.observacao || null,
+    }
+
+    if (list.length > 0) {
+      return pb.collection('custodias').update<Custodia>(list[0].id, payload, {
+        expand: 'agente1,agente2,agente3',
+      })
+    }
+
+    return pb.collection('custodias').create<Custodia>(payload, {
+      expand: 'agente1,agente2,agente3',
+    })
+  },
+
+  async deleteDia(id: string): Promise<boolean> {
+    await pb.collection('custodias').delete(id)
+    return true
+  },
+}
+
+export const permanenciasService = {
+  async getByMesAno(mes: number, ano: number): Promise<Permanencia[]> {
+    return pb.collection('permanencias').getFullList<Permanencia>({
+      filter: `mes = ${mes} && ano = ${ano}`,
+      sort: 'dia',
+      expand: 'agente1,agente2',
+    })
+  },
+
+  async upsertDia(data: {
+    mes: number
+    ano: number
+    dia: number
+    agente1?: string | null
+    agente2?: string | null
+  }): Promise<Permanencia> {
+    const list = await pb.collection('permanencias').getFullList<Permanencia>({
+      filter: `mes = ${data.mes} && ano = ${data.ano} && dia = ${data.dia}`,
+    })
+
+    const payload = {
+      mes: data.mes,
+      ano: data.ano,
+      dia: data.dia,
+      agente1: data.agente1 || null,
+      agente2: data.agente2 || null,
+    }
+
+    if (list.length > 0) {
+      return pb.collection('permanencias').update<Permanencia>(list[0].id, payload, {
+        expand: 'agente1,agente2',
+      })
+    }
+
+    return pb.collection('permanencias').create<Permanencia>(payload, {
+      expand: 'agente1,agente2',
+    })
+  },
+
+  async deleteDia(id: string): Promise<boolean> {
+    await pb.collection('permanencias').delete(id)
+    return true
   },
 }

@@ -267,7 +267,7 @@ export default function Relatorio() {
       </div>
 
       {/* ÁREA DE IMPRESSÃO / FOLHA A4 PAISAGEM */}
-      <div className="bg-white rounded-xl border border-[#E5E9F0] p-6 sm:p-8 shadow-sm print:p-0 print:border-none print:shadow-none">
+      <div className="print-landscape bg-white rounded-xl border border-[#E5E9F0] p-6 sm:p-8 shadow-sm print:p-0 print:border-none print:shadow-none">
         {/* Cabeçalho Institucional do Relatório */}
         <div className="border-b-2 border-[#0B2545] pb-4 mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">

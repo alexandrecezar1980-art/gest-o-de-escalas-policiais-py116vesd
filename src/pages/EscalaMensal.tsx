@@ -12,6 +12,9 @@ import {
   Calendar,
   CheckCircle2,
   AlertCircle,
+  MessageCircle,
+  Copy,
+  ExternalLink,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,7 +43,13 @@ import {
   feriadosService,
 } from '@/services/policeServices'
 import type { Escala, Servidor, Ferias, Feriado, TipoDiaEscala, TipoFeriado } from '@/types/police'
-import { calcularHorariosAgentes, formatarDataBr } from '@/lib/escalaRules'
+import {
+  calcularHorariosAgentes,
+  formatarDataBr,
+  formatarTelefone,
+  formatarNumeroWhatsapp,
+  gerarTextoWhatsappPlantao,
+} from '@/lib/escalaRules'
 import useRealtime from '@/hooks/use-realtime'
 
 export default function EscalaMensal() {
@@ -73,6 +82,10 @@ export default function EscalaMensal() {
 
   // Alertas de férias no dia selecionado
   const [alertaFeriasConfirmado, setAlertaFeriasConfirmado] = useState(false)
+
+  // Modal de Envio de WhatsApp do Plantão
+  const [whatsappDia, setWhatsappDia] = useState<number | null>(null)
+  const [whatsappDestinatario, setWhatsappDestinatario] = useState<string>('geral') // 'geral' ou ID do servidor
 
   const carregarDados = useCallback(async () => {
     try {
@@ -325,6 +338,130 @@ export default function EscalaMensal() {
   const getServidorNome = (id: string | undefined): string => {
     if (!id) return '-'
     return servidores.find((s) => s.id === id)?.nome || '-'
+  }
+
+  // Prepara dados de WhatsApp para o dia selecionado
+  const getDadosWhatsappDia = useCallback(
+    (dia: number) => {
+      const item = gradeMensal.find((g) => g.dia === dia)
+      if (!item) return null
+      const esc = item.escala
+      const temAgente3 = !!esc?.agente3
+      const horarios = calcularHorariosAgentes(item.tipoDia, temAgente3)
+
+      const findServ = (id?: string) => (id ? servidores.find((s) => s.id === id) : null)
+
+      const delServ = findServ(esc?.delegado)
+      const escServ = findServ(esc?.escrivao)
+      const ag1Serv = findServ(esc?.agente1)
+      const ag2Serv = findServ(esc?.agente2)
+      const ag3Serv = findServ(esc?.agente3)
+
+      const diaSemanaNome = item.dataObj.toLocaleDateString('pt-BR', { weekday: 'long' })
+      const dataFormatada = `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${ano}`
+
+      const plantonistasList: { servidor: Servidor; cargo: string }[] = []
+      if (delServ) plantonistasList.push({ servidor: delServ, cargo: 'Delegado' })
+      if (escServ) plantonistasList.push({ servidor: escServ, cargo: 'Escrivão' })
+      if (ag1Serv) plantonistasList.push({ servidor: ag1Serv, cargo: 'Agente 1' })
+      if (ag2Serv) plantonistasList.push({ servidor: ag2Serv, cargo: 'Agente 2' })
+      if (ag3Serv) plantonistasList.push({ servidor: ag3Serv, cargo: 'Agente 3' })
+
+      const mensagem = gerarTextoWhatsappPlantao({
+        dataStr: dataFormatada,
+        diaSemana: diaSemanaNome,
+        delegado: delServ
+          ? {
+              cargo: 'Delegado',
+              nome: delServ.nome,
+              telefone: delServ.telefone,
+            }
+          : null,
+        escrivao: escServ
+          ? {
+              cargo: 'Escrivão',
+              nome: escServ.nome,
+              telefone: escServ.telefone,
+            }
+          : null,
+        agente1: ag1Serv
+          ? {
+              cargo: 'Agente 1',
+              nome: ag1Serv.nome,
+              telefone: ag1Serv.telefone,
+              horario: horarios.agente1,
+            }
+          : null,
+        agente2: ag2Serv
+          ? {
+              cargo: 'Agente 2',
+              nome: ag2Serv.nome,
+              telefone: ag2Serv.telefone,
+              horario: horarios.agente2,
+            }
+          : null,
+        agente3:
+          temAgente3 && ag3Serv
+            ? {
+                cargo: 'Agente 3',
+                nome: ag3Serv.nome,
+                telefone: ag3Serv.telefone,
+                horario: horarios.agente3,
+              }
+            : null,
+      })
+
+      return {
+        dia,
+        dataFormatada,
+        diaSemanaNome,
+        plantonistasList,
+        mensagem,
+      }
+    },
+    [gradeMensal, servidores, mes, ano],
+  )
+
+  const dadosWhatsappAtual = useMemo(() => {
+    if (!whatsappDia) return null
+    return getDadosWhatsappDia(whatsappDia)
+  }, [whatsappDia, getDadosWhatsappDia])
+
+  const handleCopiarMensagemWhatsapp = () => {
+    if (!dadosWhatsappAtual) return
+    navigator.clipboard.writeText(dadosWhatsappAtual.mensagem)
+    toast.success('Mensagem do plantão copiada para a área de transferência!')
+  }
+
+  const handleCopiarLinkWhatsapp = () => {
+    if (!dadosWhatsappAtual) return
+    let url = `https://wa.me/?text=${encodeURIComponent(dadosWhatsappAtual.mensagem)}`
+    if (whatsappDestinatario !== 'geral') {
+      const plantonista = dadosWhatsappAtual.plantonistasList.find(
+        (p) => p.servidor.id === whatsappDestinatario,
+      )
+      if (plantonista?.servidor.telefone) {
+        const num = formatarNumeroWhatsapp(plantonista.servidor.telefone)
+        url = `https://wa.me/${num}?text=${encodeURIComponent(dadosWhatsappAtual.mensagem)}`
+      }
+    }
+    navigator.clipboard.writeText(url)
+    toast.success('Link do WhatsApp copiado!')
+  }
+
+  const handleAbrirWhatsapp = () => {
+    if (!dadosWhatsappAtual) return
+    let url = `https://wa.me/?text=${encodeURIComponent(dadosWhatsappAtual.mensagem)}`
+    if (whatsappDestinatario !== 'geral') {
+      const plantonista = dadosWhatsappAtual.plantonistasList.find(
+        (p) => p.servidor.id === whatsappDestinatario,
+      )
+      if (plantonista?.servidor.telefone) {
+        const num = formatarNumeroWhatsapp(plantonista.servidor.telefone)
+        url = `https://wa.me/${num}?text=${encodeURIComponent(dadosWhatsappAtual.mensagem)}`
+      }
+    }
+    window.open(url, '_blank')
   }
 
   const mesesNomes = [
@@ -610,14 +747,29 @@ export default function EscalaMensal() {
 
                       {/* Ação */}
                       <td className="py-2.5 px-3 text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenEditDia(d)}
-                          className="h-8 text-xs border-[#0B2545] text-[#0B2545] hover:bg-[#0B2545] hover:text-white transition-colors"
-                        >
-                          {esc ? 'Editar' : 'Escalar'}
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setWhatsappDia(d)
+                              setWhatsappDestinatario('geral')
+                            }}
+                            className="h-8 text-xs border-emerald-600 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center gap-1"
+                            title="Enviar escala do dia via WhatsApp"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="hidden sm:inline">WhatsApp</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenEditDia(d)}
+                            className="h-8 text-xs border-[#0B2545] text-[#0B2545] hover:bg-[#0B2545] hover:text-white transition-colors"
+                          >
+                            {esc ? 'Editar' : 'Escalar'}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -841,6 +993,92 @@ export default function EscalaMensal() {
             >
               <Save className="w-4 h-4 mr-1.5" />
               {salvandoDia ? 'Salvando...' : 'Salvar Escala do Dia'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal WhatsApp do Plantão */}
+      <Dialog open={whatsappDia !== null} onOpenChange={(open) => !open && setWhatsappDia(null)}>
+        <DialogContent className="max-w-lg bg-white max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-[#0B2545] flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-emerald-600" />
+              Enviar Escala do Plantão via WhatsApp
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#6B7280]">
+              Dia {dadosWhatsappAtual?.dataFormatada} ({dadosWhatsappAtual?.diaSemanaNome})
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-xs">
+            {/* Opções de Envio: Destinatário */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-[#1F2937]">
+                Destinatário da Mensagem:
+              </Label>
+              <Select value={whatsappDestinatario} onValueChange={setWhatsappDestinatario}>
+                <SelectTrigger className="h-10 border-[#D1D5DB] text-xs">
+                  <SelectValue placeholder="Selecione o destinatário" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="geral">
+                    Sem destinatário fixo (Link geral para Grupos Operacionais)
+                  </SelectItem>
+                  {dadosWhatsappAtual?.plantonistasList.map((p) => (
+                    <SelectItem key={p.servidor.id} value={p.servidor.id}>
+                      {p.cargo}: {p.servidor.nome} — Tel: {formatarTelefone(p.servidor.telefone)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-[#6B7280]">
+                {whatsappDestinatario === 'geral'
+                  ? 'Gera o link universal wa.me/?text=... para você compartilhar em qualquer grupo de WhatsApp.'
+                  : 'Abre conversa direta com o plantonista selecionado com a mensagem pré-formatada.'}
+              </p>
+            </div>
+
+            {/* Pré-visualização da Mensagem */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-[#1F2937]">
+                  Mensagem Formatada (Padrão Oficial):
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCopiarMensagemWhatsapp}
+                  className="h-6 text-[11px] text-[#0B2545] hover:bg-[#F5F7FA] flex items-center gap-1"
+                >
+                  <Copy className="w-3 h-3" />
+                  Copiar texto
+                </Button>
+              </div>
+              <pre className="p-3 bg-[#F5F7FA] border border-[#E5E9F0] rounded-lg text-xs font-mono text-[#1F2937] whitespace-pre-wrap select-all leading-relaxed">
+                {dadosWhatsappAtual?.mensagem}
+              </pre>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 border-t border-[#E5E9F0]">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCopiarLinkWhatsapp}
+              className="text-xs border-[#D1D5DB] flex items-center gap-1.5 w-full sm:w-auto"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              Copiar Link wa.me
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAbrirWhatsapp}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center gap-1.5 w-full sm:w-auto"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Abrir WhatsApp Agora
             </Button>
           </DialogFooter>
         </DialogContent>
