@@ -1,0 +1,459 @@
+{
+  "generatedAt": "2026-09-10T00:14:06.357Z",
+  "collections": [
+    {
+      "name": "users",
+      "type": "auth",
+      "apiRules": {
+        "list": "id = @request.auth.id",
+        "view": "id = @request.auth.id",
+        "create": "",
+        "update": "id = @request.auth.id",
+        "delete": "id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avatar",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "servidores",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "cargo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Delegado", "Escrivão", "Agente/Investigador"]
+        },
+        {
+          "name": "telefone",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Ativo", "Inativo"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_servidores_cargo ON servidores (cargo)",
+        "CREATE INDEX idx_servidores_status ON servidores (status)"
+      ]
+    },
+    {
+      "name": "unidades",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "delegado",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "escrivao1",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "escrivao2",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente1",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente2",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente3",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente4",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente5",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente6",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente7",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente8",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_unidades_delegado ON unidades (delegado)"]
+    },
+    {
+      "name": "ferias",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "servidor",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "inicio",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "fim",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_ferias_servidor ON ferias (servidor)",
+        "CREATE INDEX idx_ferias_periodo ON ferias (inicio, fim)"
+      ]
+    },
+    {
+      "name": "feriados",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Nacional", "Estadual", "Municipal"]
+        },
+        {
+          "name": "recorrente",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_feriados_data ON feriados (data)"]
+    },
+    {
+      "name": "escalas",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "mes",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ano",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "dia",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "tipo_dia",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Dia Útil", "Sexta-Feira", "Sábado", "Domingo", "Feriado"]
+        },
+        {
+          "name": "delegado",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "escrivao",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente1",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente2",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "agente3",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "servidores"
+        },
+        {
+          "name": "horarios_custom",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_escalas_mes_ano_dia ON escalas (mes, ano, dia)"]
+    },
+    {
+      "name": "atribuicoes",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "mes",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ano",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "conteudo",
+          "type": "editor",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_atribuicoes_mes_ano ON atribuicoes (mes, ano)"]
+    }
+  ]
+}
