@@ -302,9 +302,7 @@ export default function Layout() {
         <div className="max-w-[1440px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-[#C9A227]" />
-            <span className="font-medium text-[#0B2545]">
-              Secretaria de Estado da Segurança e Defesa Social
-            </span>
+            <span className="font-medium text-[#0B2545]">20 DSPC</span>
             <span>•</span>
             <span>Polícia Civil</span>
           </div>
