@@ -276,7 +276,7 @@ export default function Relatorio() {
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-[#0B2545] uppercase tracking-wide">
-                Secretaria de Estado da Segurança e Defesa Social • Polícia Civil
+                20ª DELEGACIA SECCIONAL
               </h2>
               <p className="text-xs font-semibold text-[#1F2937]">
                 ESCALA GERAL DE PLANTÃO POLICIAL OPERACIONAL — {mesesNomes[mes - 1].toUpperCase()}{' '}
