@@ -100,7 +100,7 @@ export default function Layout() {
                   <br />
                 </h1>
                 <p className="text-xs text-[#6B7280] hidden sm:block">
-                  Sistema de Gestão de Escalas Operacionais
+                  <br />
                 </p>
               </div>
             </button>
