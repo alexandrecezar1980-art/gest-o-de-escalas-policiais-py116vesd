@@ -97,10 +97,7 @@ export default function Layout() {
               </div>
               <div>
                 <h1 className="font-bold text-base sm:text-lg text-[#0B2545] leading-tight flex items-center gap-1.5">
-                  Gestão de Escalas
-                  <span className="hidden sm:inline-block text-[11px] font-semibold bg-[#E5E9F0] text-[#0B2545] px-2 py-0.5 rounded">
-                    POLÍCIA CIVIL PB
-                  </span>
+                  <br />
                 </h1>
                 <p className="text-xs text-[#6B7280] hidden sm:block">
                   Sistema de Gestão de Escalas Operacionais
@@ -111,42 +108,7 @@ export default function Layout() {
 
           {/* Desktop Nav Items */}
           <nav className="hidden md:flex items-center gap-1">
-            {visibleNavItems.map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/'}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                      isActive
-                        ? 'bg-[#0B2545] text-white shadow-sm'
-                        : 'text-[#1F2937] hover:bg-[#F5F7FA] hover:text-[#0B2545]'
-                    }`
-                  }
-                >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
-                </NavLink>
-              )
-            })}
-
-            {!isAdmin && (
-              <NavLink
-                to="/escala-publica"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-[#0B2545] text-white shadow-sm'
-                      : 'text-[#1F2937] hover:bg-[#F5F7FA] hover:text-[#0B2545]'
-                  }`
-                }
-              >
-                <CalendarCheck2 className="w-4 h-4" />
-                Escala Pública
-              </NavLink>
-            )}
+            <br />
           </nav>
 
           {/* User Section & Mobile Trigger */}
