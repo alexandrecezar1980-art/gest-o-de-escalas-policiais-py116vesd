@@ -277,7 +277,7 @@ export default function EscalaDelegados() {
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-[#0B2545] uppercase tracking-wide leading-tight">
-                Secretaria de Estado da Segurança e Defesa Social
+                20ª DELEGACIA SECCIONAL
               </h2>
               <p className="text-xs sm:text-sm font-semibold text-[#1F2937]">
                 POLÍCIA CIVIL • ESCALA DE PLANTÃO DE DELEGADOS DE POLÍCIA
@@ -463,11 +463,11 @@ export default function EscalaDelegados() {
           </div>
 
           <div className="flex flex-col items-center justify-end text-center pt-4 sm:pt-0">
+            Dr. Antonio Luiz Barbosa Netto
+            <br />
             <div className="w-56 border-b border-black mb-1.5" />
             <p className="font-bold text-[#0B2545] text-xs">DELEGADO(A) REGIONAL DE POLÍCIA</p>
-            <p className="text-[10px] text-[#6B7280]">
-              Chefia de Polícia Civil • Gestão de Escalas
-            </p>
+            <p className="text-[10px] text-[#6B7280]">20ª DSPC</p>
           </div>
         </div>
       </div>

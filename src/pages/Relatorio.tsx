@@ -409,15 +409,15 @@ export default function Relatorio() {
           <div className="mt-12 pt-8 border-t border-[#D1D5DB] grid grid-cols-2 gap-8 text-center text-xs print:grid">
             <div>
               <div className="border-t border-[#1F2937] pt-1 w-3/4 mx-auto font-semibold text-[#0B2545]">
-                Delegado(a) Geral de Polícia Civil
+                Dr. Antonio Luiz Barbosa Netto
               </div>
-              <p className="text-[10px] text-[#6B7280]">Superintendência Regional</p>
+              <p className="text-[10px] text-[#6B7280]">Delegado Seccional 20ª DPSC</p>
             </div>
             <div>
               <div className="border-t border-[#1F2937] pt-1 w-3/4 mx-auto font-semibold text-[#0B2545]">
                 Coordenação de Escalas e Operações
               </div>
-              <p className="text-[10px] text-[#6B7280]">Secretaria de Segurança Pública</p>
+              <p className="text-[10px] text-[#6B7280]">20ª DSPC</p>
             </div>
           </div>
         </div>
