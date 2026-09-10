@@ -230,8 +230,6 @@ export default function Layout() {
               )
             })}
 
-
-
             <div className="pt-3 border-t border-[#E5E9F0] mt-2">
               {isAdmin ? (
                 <Button
