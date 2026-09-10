@@ -352,7 +352,7 @@ export default function EscalaCustodias() {
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-[#0B2545] uppercase tracking-wide leading-tight">
-                Secretaria de Estado da Segurança e Defesa Social • Polícia Civil
+                20ª Delegacia Seccional
               </h2>
               <p className="text-xs sm:text-sm font-semibold text-[#1F2937]">
                 ESCALA DE CUSTÓDIA DE PRESOS E TRANSFERÊNCIAS OPERACIONAIS
@@ -514,7 +514,7 @@ export default function EscalaCustodias() {
           <p>
             Viatura oficial exclusiva para custódia e condução: <strong>S10 COM XADREZ</strong>.
           </p>
-          <p>Homologado pela Divisão de Operações Policiais</p>
+          <p>Homologado pela Gestão de Escala 20ª DSPC</p>
         </div>
       </div>
 
