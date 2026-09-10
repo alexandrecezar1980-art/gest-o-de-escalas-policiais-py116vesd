@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import {
-  Shield,
-  Eye,
-  Printer,
-  Calendar,
-  Lock,
-  Download,
-  FileSpreadsheet,
-  AlertCircle,
-} from 'lucide-react'
+import { Eye, Printer, Calendar, Lock, Download, FileSpreadsheet, AlertCircle } from 'lucide-react'
+import BrasaoPCPB from '@/components/BrasaoPCPB'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -177,15 +169,15 @@ export default function EscalaPublica() {
       <header className="no-print bg-white border-b border-[#E5E9F0] shadow-sm sticky top-0 z-30">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#0B2545] text-[#C9A227] flex items-center justify-center shadow-sm">
-              <Shield className="w-6 h-6 stroke-[2.2]" />
+            <div className="h-11 w-10 flex items-center justify-center">
+              <BrasaoPCPB className="h-10 w-auto max-w-[40px] drop-shadow-sm" />
             </div>
             <div>
               <h1 className="font-bold text-base sm:text-lg text-[#0B2545] leading-tight">
                 Escala Policial Operacional
               </h1>
               <p className="text-xs text-[#6B7280]">
-                Acesso Livre / Modo Visitante (Somente Leitura)
+                Polícia Civil PB • Modo Visitante (Somente Leitura)
               </p>
             </div>
           </div>
@@ -294,12 +286,15 @@ export default function EscalaPublica() {
           {/* Cabeçalho Oficial */}
           <div className="border-b-2 border-[#0B2545] pb-4 mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-[#0B2545] text-[#C9A227] flex items-center justify-center font-bold">
-                <Shield className="w-7 h-7 stroke-[2.2]" />
+              <div className="w-14 h-14 flex items-center justify-center shrink-0">
+                <BrasaoPCPB className="h-14 w-auto max-w-[56px] drop-shadow-sm" />
               </div>
               <div>
+                <p className="text-[10px] font-bold text-[#0B2545] tracking-wider uppercase">
+                  POLÍCIA CIVIL DO ESTADO DA PARAÍBA
+                </p>
                 <h2 className="text-base sm:text-lg font-bold text-[#0B2545] uppercase tracking-wide">
-                  Secretaria de Estado da Segurança e Defesa Social • Polícia Civil
+                  20ª DELEGACIA SECCIONAL DE POLÍCIA CIVIL
                 </h2>
                 <p className="text-xs font-semibold text-[#1F2937]">
                   ESCALA GERAL DE PLANTÃO POLICIAL OPERACIONAL — {mesesNomes[mes - 1].toUpperCase()}{' '}

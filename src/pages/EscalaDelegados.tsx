@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
-  Shield,
   Printer,
   Phone,
   MessageCircle,
@@ -10,6 +9,7 @@ import {
   AlertCircle,
   Clock,
 } from 'lucide-react'
+import BrasaoPCPB from '@/components/BrasaoPCPB'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -272,15 +272,18 @@ export default function EscalaDelegados() {
         {/* Cabeçalho Institucional do Mural */}
         <div className="border-b-2 border-[#0B2545] pb-4 mb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-lg bg-[#0B2545] text-[#C9A227] flex items-center justify-center font-bold shadow-sm">
-              <Shield className="w-8 h-8 stroke-[2.2]" />
+            <div className="w-16 h-16 flex items-center justify-center shrink-0">
+              <BrasaoPCPB className="h-16 w-auto max-w-[64px] drop-shadow-sm" />
             </div>
             <div>
+              <p className="text-[10px] font-bold text-[#0B2545] tracking-wider uppercase">
+                POLÍCIA CIVIL DO ESTADO DA PARAÍBA
+              </p>
               <h2 className="text-base sm:text-lg font-bold text-[#0B2545] uppercase tracking-wide leading-tight">
-                20ª DELEGACIA SECCIONAL
+                20ª DELEGACIA SECCIONAL DE POLÍCIA CIVIL
               </h2>
               <p className="text-xs sm:text-sm font-semibold text-[#1F2937]">
-                POLÍCIA CIVIL • ESCALA DE PLANTÃO DE DELEGADOS DE POLÍCIA
+                ESCALA DE PLANTÃO DE DELEGADOS DE POLÍCIA
               </p>
               <p className="text-xs text-[#6B7280]">
                 Mês de Referência:{' '}

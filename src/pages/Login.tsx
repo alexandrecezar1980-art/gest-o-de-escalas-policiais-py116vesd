@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { Shield, Lock, Mail, Eye, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { Lock, Mail, Eye, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import BrasaoPCPB from '@/components/BrasaoPCPB'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
@@ -66,14 +67,14 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Header institucional */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#0B2545] text-[#C9A227] shadow-md mb-4 border-2 border-[#C9A227]/30">
-            <Shield className="w-10 h-10 stroke-[2.2]" />
+          <div className="inline-flex items-center justify-center mb-3">
+            <BrasaoPCPB className="w-20 sm:w-24 h-auto max-h-28 drop-shadow-md" />
           </div>
           <h1 className="text-2xl font-bold text-[#0B2545] tracking-tight">
             Gestão de Escalas Policiais
           </h1>
           <p className="text-sm text-[#6B7280] mt-1">
-            Polícia Civil • Acesso ao Sistema Operacional
+            Polícia Civil da Paraíba • Acesso ao Sistema Operacional
           </p>
         </div>
 

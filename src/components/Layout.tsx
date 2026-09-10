@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import {
-  Shield,
   LayoutDashboard,
   Users,
   Building2,
@@ -20,6 +19,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import BrasaoPCPB from '@/components/BrasaoPCPB'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,14 +92,14 @@ export default function Layout() {
               onClick={() => navigate(isAdmin ? '/' : '/escala-publica')}
               className="flex items-center gap-3 text-left group"
             >
-              <div className="w-10 h-10 rounded-lg bg-[#0B2545] flex items-center justify-center text-[#C9A227] shadow-sm transition-transform group-hover:scale-105">
-                <Shield className="w-6 h-6 stroke-[2.2]" />
+              <div className="h-11 w-10 flex items-center justify-center transition-transform group-hover:scale-105">
+                <BrasaoPCPB className="h-10 w-auto max-w-[40px] drop-shadow-sm" />
               </div>
               <div>
                 <h1 className="font-bold text-base sm:text-lg text-[#0B2545] leading-tight flex items-center gap-1.5">
                   Gestão de Escalas
                   <span className="hidden sm:inline-block text-[11px] font-semibold bg-[#E5E9F0] text-[#0B2545] px-2 py-0.5 rounded">
-                    POLÍCIA CIVIL
+                    POLÍCIA CIVIL PB
                   </span>
                 </h1>
                 <p className="text-xs text-[#6B7280] hidden sm:block">
@@ -301,10 +301,10 @@ export default function Layout() {
       <footer className="no-print bg-white border-t border-[#E5E9F0] py-4 text-center text-xs text-[#6B7280]">
         <div className="max-w-[1440px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-[#C9A227]" />
+            <BrasaoPCPB className="w-4 h-auto" />
             <span className="font-medium text-[#0B2545]">20 DSPC</span>
             <span>•</span>
-            <span>Polícia Civil</span>
+            <span>Polícia Civil da Paraíba</span>
           </div>
           <p>
             © {new Date().getFullYear()} Gestão de Escalas Operacionais Policiais. Todos os direitos

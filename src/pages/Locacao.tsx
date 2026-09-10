@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Building2, Plus, Edit2, Trash2, AlertCircle, Users, Shield, Layers } from 'lucide-react'
+import { Building2, Plus, Edit2, Trash2, AlertCircle, Users, Layers } from 'lucide-react'
+import BrasaoPCPB from '@/components/BrasaoPCPB'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -360,7 +361,7 @@ export default function Locacao() {
                         Delegado Responsável (01):
                       </span>
                       <p className="font-semibold text-[#0B2545] mt-0.5 flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5 text-[#0B2545]" />
+                        <BrasaoPCPB className="w-3.5 h-auto" />
                         {getNome(u.delegado) || 'Não definido'}
                       </p>
                     </div>

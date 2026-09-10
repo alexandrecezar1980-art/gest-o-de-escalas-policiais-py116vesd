@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Building2,
-  Shield,
   Printer,
   RefreshCw,
   Save,

@@ -8,10 +8,10 @@ import {
   FileSpreadsheet,
   AlertTriangle,
   ArrowRight,
-  Shield,
   Clock,
   Sparkles,
 } from 'lucide-react'
+import BrasaoPCPB from '@/components/BrasaoPCPB'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -542,7 +542,7 @@ export default function Index() {
           {/* Card Institucional */}
           <div className="bg-[#0B2545] text-white p-5 rounded-xl shadow-sm border border-[#0B2545]">
             <div className="flex items-center gap-2 text-[#C9A227] mb-2 font-semibold text-xs tracking-wider uppercase">
-              <Shield className="w-4 h-4" />
+              <BrasaoPCPB className="w-4 h-auto" />
               Regras das Escalas Policiais
             </div>
             <p className="text-xs text-white/90 leading-relaxed">

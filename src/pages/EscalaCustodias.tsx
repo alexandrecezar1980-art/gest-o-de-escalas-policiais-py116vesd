@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Car,
-  Shield,
   Printer,
   RefreshCw,
   Save,
@@ -11,6 +10,7 @@ import {
   Edit2,
   Users,
 } from 'lucide-react'
+import BrasaoPCPB from '@/components/BrasaoPCPB'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -347,12 +347,15 @@ export default function EscalaCustodias() {
         {/* Cabeçalho Institucional */}
         <div className="border-b-2 border-[#0B2545] pb-4 mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-[#0B2545] text-[#C9A227] flex items-center justify-center font-bold">
-              <Shield className="w-7 h-7 stroke-[2.2]" />
+            <div className="w-14 h-14 flex items-center justify-center shrink-0">
+              <BrasaoPCPB className="h-14 w-auto max-w-[56px] drop-shadow-sm" />
             </div>
             <div>
+              <p className="text-[10px] font-bold text-[#0B2545] tracking-wider uppercase">
+                POLÍCIA CIVIL DO ESTADO DA PARAÍBA
+              </p>
               <h2 className="text-base sm:text-lg font-bold text-[#0B2545] uppercase tracking-wide leading-tight">
-                20ª Delegacia Seccional
+                20ª DELEGACIA SECCIONAL DE POLÍCIA CIVIL
               </h2>
               <p className="text-xs sm:text-sm font-semibold text-[#1F2937]">
                 ESCALA DE CUSTÓDIA DE PRESOS E TRANSFERÊNCIAS OPERACIONAIS
