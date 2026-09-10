@@ -412,7 +412,7 @@ export default function EscalaPublica() {
       {/* Footer */}
       <footer className="no-print bg-white border-t border-[#E5E9F0] py-4 text-center text-xs text-[#6B7280]">
         <div className="max-w-[1440px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Secretaria de Segurança Pública • Polícia Civil</span>
+          <span>20 DSOC - CAJAZEIRAS</span>
           <span>Acesso Visitante às Escalas de Plantão</span>
         </div>
       </footer>
