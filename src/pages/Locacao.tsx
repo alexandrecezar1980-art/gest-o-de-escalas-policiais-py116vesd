@@ -186,7 +186,7 @@ export default function Locacao() {
     }
 
     // Se já tiver 2 ou mais escrivães (limite padrão recomendado)
-    if (formEscrivaes.length >= 2) {
+    if (formEscrivaes.length >= 3) {
       setMotivoConfirmacao(
         `A unidade passará a ter ${formEscrivaes.length + 1} escrivães (padrão recomendado: 02).`,
       )
