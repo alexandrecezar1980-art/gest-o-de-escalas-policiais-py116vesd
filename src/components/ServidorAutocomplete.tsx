@@ -48,13 +48,22 @@ export function ServidorAutocomplete({
     return servidores.find((s) => s.id === value) || null
   }, [servidores, value])
 
-  // Filtragem inicial por cargo (considera tanto cargo principal quanto cargos secundários)
+  // Filtragem inicial por cargo (considera tanto cargo principal quanto cargos secundários com suporte semântico)
   const servidoresFiltradosPorCargo = useMemo(() => {
     if (!filtroCargo) return servidores
     const cargosAlvo = Array.isArray(filtroCargo) ? filtroCargo : [filtroCargo]
     return servidores.filter((s) => {
       const todosCargos = getCargosServidor(s)
-      return cargosAlvo.some((c) => todosCargos.includes(c))
+      return cargosAlvo.some((alvo) => {
+        return (
+          todosCargos.includes(alvo) ||
+          todosCargos.some(
+            (c) =>
+              c.toLowerCase().includes(alvo.toLowerCase()) ||
+              alvo.toLowerCase().includes(c.toLowerCase()),
+          )
+        )
+      })
     })
   }, [servidores, filtroCargo])
 

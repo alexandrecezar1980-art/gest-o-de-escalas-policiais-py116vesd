@@ -73,6 +73,7 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
   const now = useMemo(() => new Date(), [])
   const [mes, setMes] = useState<number>(now.getMonth() + 1)
   const [ano, setAno] = useState<number>(now.getFullYear())
+  const [orientacao, setOrientacao] = useState<'landscape' | 'portrait'>('landscape')
 
   // Seleção de escalas
   const [selecionadas, setSelecionadas] = useState<Record<TipoEscalaSelecionavel, boolean>>({
@@ -344,10 +345,15 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
       return
     }
 
-    // Fechar modal ou disparar print da área compilada
-    setTimeout(() => {
-      window.print()
-    }, 150)
+    // Fecha o modal antes para desmontar o Dialog e Backdrop do Radix
+    onOpenChange(false)
+
+    // Dispara window.print() após desmontagem completa do Dialog e Backdrop
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.print()
+      }, 250)
+    })
   }
 
   return (
@@ -396,6 +402,23 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
                         {a}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Seletor de Orientação da Página */}
+              <div className="flex items-center gap-2">
+                <Label className="text-xs font-semibold text-[#1F2937]">Orientação Geral:</Label>
+                <Select
+                  value={orientacao}
+                  onValueChange={(val: 'landscape' | 'portrait') => setOrientacao(val)}
+                >
+                  <SelectTrigger className="w-[140px] h-8 border-[#D1D5DB] text-xs font-medium text-[#0B2545]">
+                    <SelectValue placeholder="Orientação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="landscape">Paisagem (A4)</SelectItem>
+                    <SelectItem value="portrait">Retrato (A4)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -612,11 +635,18 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
 
       {/* ÁREA DE IMPRESSÃO COMPILADA EM LOTE (Visível apenas na janela de impressão do navegador) */}
       <div className="hidden print:block print:p-0 print:border-none print:shadow-none bg-white text-black">
+        {/* Injeção dinâmica da orientação escolhida para o spool de impressão */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `@media print { @page { size: A4 ${orientacao}; margin: 8mm; } }`,
+          }}
+        />
+
         {/* ========================================================================= */}
         {/* 1. ESCALA GERAL DE PLANTÃO + ATRIBUIÇÕES */}
         {/* ========================================================================= */}
         {selecionadas.plantao_atribuicoes && (
-          <div className="page-break-after-always print-landscape">
+          <div className="page-break-after-always print-landscape print-section w-full max-w-full box-border">
             {/* Cabeçalho */}
             <div className="border-b-2 border-[#0B2545] pb-3 mb-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -643,18 +673,18 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
             </div>
 
             {/* Tabela */}
-            <table className="w-full border-collapse text-[10px] border border-[#0B2545]">
+            <table className="w-full border-collapse text-[9px] border border-[#0B2545] table-auto">
               <thead>
                 <tr className="bg-[#0B2545] text-white font-semibold">
-                  <th className="py-1.5 px-2 border border-[#0B2545] text-center w-12">DATA</th>
-                  <th className="py-1.5 px-2 border border-[#0B2545] text-center w-14">DIA</th>
-                  <th className="py-1.5 px-2 border border-[#0B2545] w-24">TIPO</th>
-                  <th className="py-1.5 px-2 border border-[#0B2545]">DELEGADO(A)</th>
-                  <th className="py-1.5 px-2 border border-[#0B2545]">ESCRIVÃO(Ã)</th>
-                  <th className="py-1.5 px-2 border border-[#0B2545]">AGENTE 1</th>
-                  <th className="py-1.5 px-2 border border-[#0B2545]">AGENTE 2</th>
-                  <th className="py-1.5 px-2 border border-[#0B2545]">AGENTE 3</th>
-                  <th className="py-1.5 px-2 border border-[#0B2545]">HORÁRIOS</th>
+                  <th className="py-1 px-1 border border-[#0B2545] text-center w-10">DATA</th>
+                  <th className="py-1 px-1 border border-[#0B2545] text-center w-12">DIA</th>
+                  <th className="py-1 px-1.5 border border-[#0B2545] w-20">TIPO</th>
+                  <th className="py-1 px-1.5 border border-[#0B2545]">DELEGADO(A)</th>
+                  <th className="py-1 px-1.5 border border-[#0B2545]">ESCRIVÃO(Ã)</th>
+                  <th className="py-1 px-1.5 border border-[#0B2545]">AGENTE 1</th>
+                  <th className="py-1 px-1.5 border border-[#0B2545]">AGENTE 2</th>
+                  <th className="py-1 px-1.5 border border-[#0B2545]">AGENTE 3</th>
+                  <th className="py-1 px-1.5 border border-[#0B2545]">HORÁRIOS</th>
                 </tr>
               </thead>
               <tbody>
@@ -669,29 +699,31 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
                       key={d}
                       className={`border-b border-gray-300 ${idx % 2 === 1 ? 'bg-gray-50' : 'bg-white'}`}
                     >
-                      <td className="py-1 px-1.5 text-center font-bold border-r border-gray-300">
+                      <td className="py-0.5 px-1 text-center font-bold border-r border-gray-300">
                         {String(d).padStart(2, '0')}/{String(mes).padStart(2, '0')}
                       </td>
-                      <td className="py-1 px-1.5 text-center uppercase border-r border-gray-300 font-semibold">
+                      <td className="py-0.5 px-1 text-center uppercase border-r border-gray-300 font-semibold text-[8px]">
                         {diaSemana}
                       </td>
-                      <td className="py-1 px-1.5 border-r border-gray-300">{item.tipoDia}</td>
-                      <td className="py-1 px-1.5 border-r border-gray-300 font-medium">
+                      <td className="py-0.5 px-1.5 border-r border-gray-300 text-[8.5px]">
+                        {item.tipoDia}
+                      </td>
+                      <td className="py-0.5 px-1.5 border-r border-gray-300 font-medium">
                         {getNomeServidor(esc?.delegado)}
                       </td>
-                      <td className="py-1 px-1.5 border-r border-gray-300">
+                      <td className="py-0.5 px-1.5 border-r border-gray-300">
                         {getNomeServidor(esc?.escrivao)}
                       </td>
-                      <td className="py-1 px-1.5 border-r border-gray-300">
+                      <td className="py-0.5 px-1.5 border-r border-gray-300">
                         {getNomeServidor(esc?.agente1)}
                       </td>
-                      <td className="py-1 px-1.5 border-r border-gray-300">
+                      <td className="py-0.5 px-1.5 border-r border-gray-300">
                         {getNomeServidor(esc?.agente2)}
                       </td>
-                      <td className="py-1 px-1.5 border-r border-gray-300">
+                      <td className="py-0.5 px-1.5 border-r border-gray-300">
                         {esc?.agente3 ? getNomeServidor(esc.agente3) : '-'}
                       </td>
-                      <td className="py-1 px-1.5 text-[9px] font-mono leading-tight">
+                      <td className="py-0.5 px-1 text-[8px] font-mono leading-tight">
                         {horarios.plantaoDesc} (1: {horarios.agente1} | 2: {horarios.agente2}
                         {horarios.agente3 && ` | 3: ${horarios.agente3}`})
                       </td>
@@ -733,7 +765,7 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
         {/* 2. ESCALA DE PERMANÊNCIA (DIAS ÚTEIS) */}
         {/* ========================================================================= */}
         {selecionadas.permanencia && (
-          <div className="page-break-after-always print-portrait">
+          <div className="page-break-after-always print-portrait print-section w-full max-w-full box-border">
             <div className="border-b-2 border-[#0B2545] pb-3 mb-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 flex items-center justify-center shrink-0">
@@ -816,7 +848,7 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
         {/* 3. ESCALA DE DELEGADOS (MURAL COM TELEFONES) */}
         {/* ========================================================================= */}
         {selecionadas.delegados && (
-          <div className="page-break-after-always print-portrait">
+          <div className="page-break-after-always print-portrait print-section w-full max-w-full box-border">
             <div className="border-b-2 border-[#0B2545] pb-3 mb-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 flex items-center justify-center shrink-0">
@@ -904,7 +936,7 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
         {/* 4. ESCALA DE CUSTÓDIAS */}
         {/* ========================================================================= */}
         {selecionadas.custodias && (
-          <div className="page-break-after-always print-portrait">
+          <div className="page-break-after-always print-portrait print-section w-full max-w-full box-border">
             <div className="border-b-2 border-[#0B2545] pb-3 mb-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 flex items-center justify-center shrink-0">
@@ -994,7 +1026,7 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
         {/* 5. QUADRO DE EXPEDIENTE / LOTAÇÃO DAS UNIDADES */}
         {/* ========================================================================= */}
         {selecionadas.lotacao && (
-          <div className="page-break-after-always print-portrait">
+          <div className="page-break-after-always print-portrait print-section w-full max-w-full box-border">
             <div className="border-b-2 border-[#0B2545] pb-3 mb-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 flex items-center justify-center shrink-0">
@@ -1091,7 +1123,7 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
         {/* 6. RELATÓRIO DE HORAS: NORMAIS VS. MAJORADAS */}
         {/* ========================================================================= */}
         {selecionadas.horas && (
-          <div className="print-portrait">
+          <div className="print-portrait print-section w-full max-w-full box-border">
             <div className="border-b-2 border-[#0B2545] pb-3 mb-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 flex items-center justify-center shrink-0">
@@ -1143,28 +1175,22 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
               </div>
             </div>
 
-            <table className="w-full border-collapse text-[10px] border border-[#0B2545]">
+            <table className="w-full border-collapse text-[9px] border border-[#0B2545] table-auto">
               <thead>
                 <tr className="bg-[#0B2545] text-white">
-                  <th className="py-1.5 px-2 border border-[#0B2545] text-left">
+                  <th className="py-1 px-1.5 border border-[#0B2545] text-left">
                     SERVIDOR POLICIAL
                   </th>
-                  <th className="py-1.5 px-2 border border-[#0B2545] text-left w-24">CARGO</th>
-                  <th className="py-1.5 px-2 border border-[#0B2545] text-center w-20">
-                    PLANTÕES NORM.
+                  <th className="py-1 px-1.5 border border-[#0B2545] text-left w-24">CARGO</th>
+                  <th className="py-1 px-1 border border-[#0B2545] text-center w-16">
+                    PLANT. NORM.
                   </th>
-                  <th className="py-1.5 px-2 border border-[#0B2545] text-center w-20">
-                    HORAS NORM.
+                  <th className="py-1 px-1 border border-[#0B2545] text-center w-16">H. NORM.</th>
+                  <th className="py-1 px-1 border border-[#0B2545] text-center w-16">
+                    PLANT. MAJ.
                   </th>
-                  <th className="py-1.5 px-2 border border-[#0B2545] text-center w-20">
-                    PLANTÕES MAJ.
-                  </th>
-                  <th className="py-1.5 px-2 border border-[#0B2545] text-center w-20">
-                    HORAS MAJ.
-                  </th>
-                  <th className="py-1.5 px-2 border border-[#0B2545] text-center w-20">
-                    TOTAL HORAS
-                  </th>
+                  <th className="py-1 px-1 border border-[#0B2545] text-center w-16">H. MAJ.</th>
+                  <th className="py-1 px-1 border border-[#0B2545] text-center w-16">TOTAL</th>
                 </tr>
               </thead>
               <tbody>
@@ -1173,23 +1199,25 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
                     key={it.servidor.id}
                     className={`border-b border-gray-300 ${idx % 2 === 1 ? 'bg-gray-50' : 'bg-white'}`}
                   >
-                    <td className="py-1 px-2 font-medium border-r border-gray-300">
+                    <td className="py-0.5 px-1.5 font-medium border-r border-gray-300">
                       {it.servidor.nome}
                     </td>
-                    <td className="py-1 px-2 border-r border-gray-300">{it.cargo}</td>
-                    <td className="py-1 px-2 text-center border-r border-gray-300">
+                    <td className="py-0.5 px-1.5 border-r border-gray-300 text-[8.5px]">
+                      {it.cargo}
+                    </td>
+                    <td className="py-0.5 px-1 text-center border-r border-gray-300">
                       {it.plantoesNormais}
                     </td>
-                    <td className="py-1 px-2 text-center font-semibold border-r border-gray-300">
+                    <td className="py-0.5 px-1 text-center font-semibold border-r border-gray-300">
                       {it.horasNormais}h
                     </td>
-                    <td className="py-1 px-2 text-center border-r border-gray-300">
+                    <td className="py-0.5 px-1 text-center border-r border-gray-300">
                       {it.plantoesMajorados}
                     </td>
-                    <td className="py-1 px-2 text-center font-semibold text-amber-800 border-r border-gray-300">
+                    <td className="py-0.5 px-1 text-center font-semibold text-amber-800 border-r border-gray-300">
                       {it.horasMajoradas}h
                     </td>
-                    <td className="py-1 px-2 text-center font-bold text-[#0B2545]">
+                    <td className="py-0.5 px-1 text-center font-bold text-[#0B2545]">
                       {it.totalHoras}h
                     </td>
                   </tr>
@@ -1197,20 +1225,20 @@ export default function CentralImpressaoModal({ open, onOpenChange }: CentralImp
               </tbody>
               <tfoot>
                 <tr className="bg-gray-200 font-bold border-t-2 border-black">
-                  <td colSpan={2} className="py-1.5 px-2 uppercase">
+                  <td colSpan={2} className="py-1 px-1.5 uppercase">
                     TOTAL GERAL
                   </td>
-                  <td className="py-1.5 px-2 text-center">
+                  <td className="py-1 px-1 text-center">
                     {dadosHoras.itens.reduce((acc, c) => acc + c.plantoesNormais, 0)}
                   </td>
-                  <td className="py-1.5 px-2 text-center">{dadosHoras.totalGeralNormais}h</td>
-                  <td className="py-1.5 px-2 text-center">
+                  <td className="py-1 px-1 text-center">{dadosHoras.totalGeralNormais}h</td>
+                  <td className="py-1 px-1 text-center">
                     {dadosHoras.itens.reduce((acc, c) => acc + c.plantoesMajorados, 0)}
                   </td>
-                  <td className="py-1.5 px-2 text-center text-amber-900">
+                  <td className="py-1 px-1 text-center text-amber-900">
                     {dadosHoras.totalGeralMajoradas}h
                   </td>
-                  <td className="py-1.5 px-2 text-center text-black">
+                  <td className="py-1 px-1 text-center text-black">
                     {dadosHoras.totalGeralHoras}h
                   </td>
                 </tr>

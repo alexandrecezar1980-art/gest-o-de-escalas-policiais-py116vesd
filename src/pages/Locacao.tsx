@@ -37,7 +37,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { unidadesService, servidoresService } from '@/services/policeServices'
 import type { Unidade, Servidor } from '@/types/police'
-import { getUnidadeEscrivaes, getUnidadeAgentes } from '@/types/police'
+import { getUnidadeEscrivaes, getUnidadeAgentes, servidorTemCargo } from '@/types/police'
 import ServidorAutocomplete from '@/components/ServidorAutocomplete'
 import ConfirmacaoOperacionalModal from '@/components/ConfirmacaoOperacionalModal'
 import useRealtime from '@/hooks/use-realtime'
@@ -118,32 +118,18 @@ export default function Locacao() {
     return map
   }, [unidades, editingId])
 
-  // Listas de servidores por cargo (suportando multifunção / cargos secundários)
+  // Listas de servidores por cargo (suportando multifunção, cargos secundários e reconhecimento semântico flexível)
   const delegadosDisponiveis = useMemo(() => {
-    return servidores.filter(
-      (s) =>
-        (s.cargo === 'Delegado' ||
-          (Array.isArray(s.cargos_secundarios) && s.cargos_secundarios.includes('Delegado'))) &&
-        s.status === 'Ativo',
-    )
+    return servidores.filter((s) => servidorTemCargo(s, 'Delegado') && s.status === 'Ativo')
   }, [servidores])
 
   const escrivaesDisponiveis = useMemo(() => {
-    return servidores.filter(
-      (s) =>
-        (s.cargo === 'Escrivão' ||
-          (Array.isArray(s.cargos_secundarios) && s.cargos_secundarios.includes('Escrivão'))) &&
-        s.status === 'Ativo',
-    )
+    return servidores.filter((s) => servidorTemCargo(s, 'Escrivão') && s.status === 'Ativo')
   }, [servidores])
 
   const agentesDisponiveis = useMemo(() => {
     return servidores.filter(
-      (s) =>
-        (s.cargo === 'Agente/Investigador' ||
-          (Array.isArray(s.cargos_secundarios) &&
-            s.cargos_secundarios.includes('Agente/Investigador'))) &&
-        s.status === 'Ativo',
+      (s) => servidorTemCargo(s, 'Agente/Investigador') && s.status === 'Ativo',
     )
   }, [servidores])
 
@@ -274,10 +260,12 @@ export default function Locacao() {
     try {
       setSaving(true)
       if (editingId) {
-        await unidadesService.update(editingId, payload)
+        const atualizada = await unidadesService.update(editingId, payload)
+        setUnidades((prev) => prev.map((u) => (u.id === editingId ? { ...u, ...atualizada } : u)))
         toast.success('Lotação da Unidade atualizada com sucesso!')
       } else {
-        await unidadesService.create(payload)
+        const criada = await unidadesService.create(payload)
+        setUnidades((prev) => [...prev, criada])
         toast.success('Unidade cadastrada com sucesso!')
       }
       setIsModalOpen(false)
@@ -296,7 +284,9 @@ export default function Locacao() {
     if (!deleteId) return
     try {
       setDeleting(true)
-      await unidadesService.delete(deleteId)
+      const idParaRemover = deleteId
+      await unidadesService.delete(idParaRemover)
+      setUnidades((prev) => prev.filter((u) => u.id !== idParaRemover))
       toast.success('Unidade removida com sucesso!')
       setDeleteId(null)
       carregarDados()

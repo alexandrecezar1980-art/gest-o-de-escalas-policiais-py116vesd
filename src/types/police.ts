@@ -60,27 +60,76 @@ export interface Unidade {
 }
 
 /**
+ * Normaliza e compara semanticamente se uma string de cargo corresponde a um tipo base
+ * Reconhece variações como:
+ * - 'Agente/Investigador': 'agente', 'investigador', 'agente de policia', etc.
+ * - 'Escrivão': 'escrivao', 'escriva', etc.
+ * - 'Delegado': 'delegado', 'delegada', etc.
+ */
+export function normalizarCargoSemantico(
+  cargoRaw: string | undefined | null,
+): CargoServidor | null {
+  if (!cargoRaw) return null
+  const str = cargoRaw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+
+  if (str.includes('agent') || str.includes('investigad')) {
+    return 'Agente/Investigador'
+  }
+  if (str.includes('escriv')) {
+    return 'Escrivão'
+  }
+  if (str.includes('delegad')) {
+    return 'Delegado'
+  }
+  return null
+}
+
+/**
  * Retorna todos os cargos/funções de um servidor (cargo principal + cargos secundários)
+ * com tipagem flexível e deduplicada
  */
 export function getCargosServidor(s: Servidor | undefined | null): CargoServidor[] {
   if (!s) return []
-  const cargos: CargoServidor[] = [s.cargo]
+  const cargos: CargoServidor[] = []
+
+  const adicionarSeValido = (val?: string | null) => {
+    if (!val) return
+    const semantico = normalizarCargoSemantico(val) || (val as CargoServidor)
+    if (semantico && !cargos.includes(semantico)) {
+      cargos.push(semantico)
+    }
+  }
+
+  adicionarSeValido(s.cargo)
+
   if (Array.isArray(s.cargos_secundarios)) {
     for (const c of s.cargos_secundarios) {
-      if (c && !cargos.includes(c)) {
-        cargos.push(c)
-      }
+      adicionarSeValido(c)
     }
   }
   return cargos
 }
 
 /**
- * Verifica se o servidor possui determinado cargo (seja primário ou secundário)
+ * Verifica se o servidor possui determinado cargo (seja primário ou secundário),
+ * com verificação semântica flexível (ex.: aceita 'Agente', 'Investigador', 'Agente/Investigador')
  */
-export function servidorTemCargo(s: Servidor | undefined | null, cargo: CargoServidor): boolean {
+export function servidorTemCargo(
+  s: Servidor | undefined | null,
+  cargoAlvo: CargoServidor | string,
+): boolean {
   if (!s) return false
-  return getCargosServidor(s).includes(cargo)
+  const semanticoAlvo = normalizarCargoSemantico(cargoAlvo) || cargoAlvo
+  const cargos = getCargosServidor(s)
+  return cargos.some((c) => {
+    if (c === semanticoAlvo) return true
+    const sem = normalizarCargoSemantico(c)
+    return sem === semanticoAlvo
+  })
 }
 
 /**

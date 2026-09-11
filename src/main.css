@@ -155,9 +155,20 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  /* Ocultar explicitamente modais, backdrops, overlays de diálogos e botões na impressão */
+  .modal,
+  .modal-backdrop,
+  .overlay,
+  [role='dialog'],
+  [role='alertdialog'],
+  [data-radix-portal],
+  [data-state='open'][data-aria-hidden='true'],
+  button,
   .no-print {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
   }
@@ -166,6 +177,23 @@
   }
   .print-landscape {
     page: page-landscape;
+  }
+
+  /* Seções de impressão compiladas com largura fluida e tabelas responsivas */
+  .print-section {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .print-section table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    box-sizing: border-box !important;
+    word-break: break-word !important;
   }
 
   /* Impressão sem barras de rolagem, overflow visível e altura dinâmica */
