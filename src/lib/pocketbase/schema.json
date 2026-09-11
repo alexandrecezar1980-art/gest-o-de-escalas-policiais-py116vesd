@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T18:43:34.045Z",
+  "generatedAt": "2026-09-11T19:04:38.154Z",
   "collections": [
     {
       "name": "users",
@@ -29,14 +29,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": [
@@ -66,7 +71,11 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["Delegado", "Escrivão", "Agente/Investigador"]
+          "selectValues": [
+            "Delegado",
+            "Escrivão",
+            "Agente/Investigador"
+          ]
         },
         {
           "name": "telefone",
@@ -79,21 +88,29 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["Ativo", "Inativo"]
+          "selectValues": [
+            "Ativo",
+            "Inativo"
+          ]
         },
         {
           "name": "created",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "matricula",
@@ -240,14 +257,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "escrivaes",
@@ -262,7 +284,9 @@
           "system": false
         }
       ],
-      "indexes": ["CREATE INDEX idx_unidades_delegado ON unidades (delegado)"]
+      "indexes": [
+        "CREATE INDEX idx_unidades_delegado ON unidades (delegado)"
+      ]
     },
     {
       "name": "ferias",
@@ -299,14 +323,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": [
@@ -342,7 +371,11 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["Nacional", "Estadual", "Municipal"]
+          "selectValues": [
+            "Nacional",
+            "Estadual",
+            "Municipal"
+          ]
         },
         {
           "name": "recorrente",
@@ -355,17 +388,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_feriados_data ON feriados (data)"]
+      "indexes": [
+        "CREATE INDEX idx_feriados_data ON feriados (data)"
+      ]
     },
     {
       "name": "escalas",
@@ -401,7 +441,13 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["Dia Útil", "Sexta-Feira", "Sábado", "Domingo", "Feriado"]
+          "selectValues": [
+            "Dia Útil",
+            "Sexta-Feira",
+            "Sábado",
+            "Domingo",
+            "Feriado"
+          ]
         },
         {
           "name": "delegado",
@@ -449,17 +495,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_escalas_mes_ano_dia ON escalas (mes, ano, dia)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_escalas_mes_ano_dia ON escalas (mes, ano, dia)"
+      ]
     },
     {
       "name": "atribuicoes",
@@ -495,17 +548,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_atribuicoes_mes_ano ON atribuicoes (mes, ano)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_atribuicoes_mes_ano ON atribuicoes (mes, ano)"
+      ]
     },
     {
       "name": "custodias",
@@ -574,17 +634,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_custodias_mes_ano_dia ON custodias (mes, ano, dia)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_custodias_mes_ano_dia ON custodias (mes, ano, dia)"
+      ]
     },
     {
       "name": "permanencias",
@@ -634,14 +701,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": [
