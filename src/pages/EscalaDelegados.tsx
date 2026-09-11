@@ -469,7 +469,7 @@ export default function EscalaDelegados() {
             Dr. Antonio Luiz Barbosa Netto
             <br />
             <div className="w-56 border-b border-black mb-1.5" />
-            <p className="font-bold text-[#0B2545] text-xs">DELEGADO(A) REGIONAL DE POLÍCIA</p>
+            <p className="font-bold text-[#0B2545] text-xs">DELEGADO SECCIONAL</p>
             <p className="text-[10px] text-[#6B7280]">20ª DSPC</p>
           </div>
         </div>
