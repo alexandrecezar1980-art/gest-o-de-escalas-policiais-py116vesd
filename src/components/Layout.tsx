@@ -21,7 +21,6 @@ import {
   ChevronRight,
   ChevronDown,
   Printer,
-  Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import BrasaoPCPB from '@/components/BrasaoPCPB'
@@ -264,7 +263,7 @@ export default function Layout() {
               {!sidebarCollapsed ? (
                 <div className="flex items-center gap-2.5 overflow-hidden">
                   <div className="w-8 h-8 rounded-lg bg-[#0B2545] text-white flex items-center justify-center shrink-0">
-                    <Shield className="w-4 h-4 text-[#C9A227]" />
+                    <BrasaoPCPB size="xs" className="w-4 h-4 object-contain" />
                   </div>
                   <div className="truncate">
                     <p className="font-bold text-xs text-[#0B2545] leading-tight">
@@ -276,7 +275,7 @@ export default function Layout() {
               ) : (
                 <div className="w-full flex justify-center">
                   <div className="w-8 h-8 rounded-lg bg-[#0B2545] text-white flex items-center justify-center">
-                    <Shield className="w-4 h-4 text-[#C9A227]" />
+                    <BrasaoPCPB size="xs" className="w-4 h-4 object-contain" />
                   </div>
                 </div>
               )}
