@@ -495,7 +495,7 @@ export default function Locacao() {
                         <span className="font-semibold text-[#6B7280] uppercase tracking-wider text-[10px] block">
                           Agentes / Investigadores ({agentesList.length}):
                         </span>
-                        {agentesList.length > 8 && (
+                        {agentesList.length > 10 && (
                           <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
                             Acima do padrão
                           </span>
