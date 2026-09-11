@@ -15,7 +15,11 @@ import {
   MessageCircle,
   Copy,
   ExternalLink,
+  Clock,
+  Printer,
+  Table,
 } from 'lucide-react'
+import RelatorioHoras from '@/components/RelatorioHoras'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -104,6 +108,9 @@ export default function EscalaMensal() {
 
   // Alertas de férias no dia selecionado
   const [alertaFeriasConfirmado, setAlertaFeriasConfirmado] = useState(false)
+
+  // Aba ativa: 'grade' (Grade Mensal de Plantão) ou 'horas' (Relatório de Carga Horária)
+  const [abaAtiva, setAbaAtiva] = useState<'grade' | 'horas'>('grade')
 
   // Modal de Envio de WhatsApp do Plantão
   const [whatsappDia, setWhatsappDia] = useState<number | null>(null)
@@ -613,22 +620,50 @@ export default function EscalaMensal() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Alternância de Abas: Grade Mensal vs Relatório de Horas */}
+          <div className="flex items-center bg-[#F5F7FA] p-1 rounded-lg border border-[#E5E9F0]">
+            <button
+              type="button"
+              onClick={() => setAbaAtiva('grade')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                abaAtiva === 'grade'
+                  ? 'bg-[#0B2545] text-white shadow-xs'
+                  : 'text-[#4B5563] hover:text-[#0B2545]'
+              }`}
+            >
+              <Table className="w-3.5 h-3.5" />
+              Grade do Plantão
+            </button>
+            <button
+              type="button"
+              onClick={() => setAbaAtiva('horas')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                abaAtiva === 'horas'
+                  ? 'bg-[#0B2545] text-white shadow-xs'
+                  : 'text-[#4B5563] hover:text-[#0B2545]'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Relatório de Carga Horária
+            </button>
+          </div>
+
           <Button
             variant="outline"
             onClick={() => setIsFeriadoModalOpen(true)}
-            className="border-[#C9A227] text-[#0B2545] hover:bg-[#FDF6E3] font-medium"
+            className="border-[#C9A227] text-[#0B2545] hover:bg-[#FDF6E3] font-medium text-xs h-9"
           >
-            <Sparkles className="w-4 h-4 mr-1.5 text-[#C9A227]" />
-            Gerenciar Feriados ({feriados.length})
+            <Sparkles className="w-3.5 h-3.5 mr-1.5 text-[#C9A227]" />
+            Feriados ({feriados.length})
           </Button>
 
           <Button
             variant="outline"
             onClick={carregarDados}
-            className="border-[#D1D5DB] text-[#1F2937]"
+            className="border-[#D1D5DB] text-[#1F2937] h-9 w-9 p-0"
             title="Atualizar dados"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>
@@ -694,202 +729,217 @@ export default function EscalaMensal() {
         </div>
       </div>
 
-      {/* Grade Mensal Automática */}
-      <div className="bg-white rounded-xl border border-[#E5E9F0] shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-[#F5F7FA] border-b border-[#E5E9F0] text-[#0B2545] font-semibold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-3 w-16 text-center">Data</th>
-                <th className="py-3 px-3 w-28">Dia / Tipo</th>
-                <th className="py-3 px-3">Delegado</th>
-                <th className="py-3 px-3">Escrivão</th>
-                <th className="py-3 px-3">Agentes Operacionais</th>
-                <th className="py-3 px-3">Horários Previstos</th>
-                <th className="py-3 px-3 text-right">Ação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E5E9F0]">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-sm text-[#6B7280]">
-                    Carregando grade operacional do mês...
-                  </td>
-                </tr>
-              ) : (
-                gradeMensal.map((item) => {
-                  const d = item.dia
-                  const diaSemana = item.dataObj.toLocaleDateString('pt-BR', { weekday: 'short' })
-                  const esc = item.escala
-                  const temAgente3 = !!esc?.agente3
-                  const horarios = calcularHorariosAgentes(item.tipoDia, temAgente3)
-
-                  // Verificar se tem algum servidor de férias escalado nesse dia
-                  const hasFeriasAlert = (() => {
-                    if (!esc) return false
-                    const ids = [
-                      esc.delegado,
-                      esc.escrivao,
-                      esc.agente1,
-                      esc.agente2,
-                      esc.agente3,
-                    ].filter(Boolean)
-                    for (const id of ids) {
-                      if (feriasService.isServidorEmFerias(ferias, id!, item.dataObj)) {
-                        return true
-                      }
-                    }
-                    return false
-                  })()
-
-                  const isFeriado = item.tipoDia === 'Feriado'
-                  const isFds = item.tipoDia === 'Sábado' || item.tipoDia === 'Domingo'
-                  const isSexta = item.tipoDia === 'Sexta-Feira'
-
-                  return (
-                    <tr
-                      key={d}
-                      className={`hover:bg-[#F5F7FA] transition-colors ${
-                        hasFeriasAlert
-                          ? 'bg-[#FDF3E7]'
-                          : isFeriado
-                            ? 'bg-[#FFFDF5]'
-                            : isFds
-                              ? 'bg-[#F8FAFC]'
-                              : d % 2 === 1
-                                ? 'bg-white'
-                                : 'bg-[#F9FAFB]'
-                      }`}
-                    >
-                      {/* Data */}
-                      <td className="py-2.5 px-3 text-center font-bold text-sm text-[#0B2545]">
-                        <span className="block">{String(d).padStart(2, '0')}</span>
-                        <span className="text-[10px] text-[#6B7280] font-normal uppercase">
-                          {diaSemana}
-                        </span>
-                      </td>
-
-                      {/* Tipo de Dia */}
-                      <td className="py-2.5 px-3">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] font-semibold ${
-                            isFeriado
-                              ? 'bg-[#FDF6E3] text-[#C9A227] border-[#C9A227]'
-                              : isSexta
-                                ? 'bg-blue-50 text-blue-800 border-blue-200'
-                                : isFds
-                                  ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                                  : 'bg-gray-100 text-gray-700 border-gray-200'
-                          }`}
-                        >
-                          {item.tipoDia}
-                        </Badge>
-                        {item.feriadoInfo && (
-                          <p
-                            className="text-[10px] text-[#C9A227] font-medium mt-0.5 truncate max-w-[140px]"
-                            title={item.feriadoInfo.nome}
-                          >
-                            ★ {item.feriadoInfo.nome}
-                          </p>
-                        )}
-                        {hasFeriasAlert && (
-                          <span className="inline-flex items-center gap-1 text-[10px] text-[#D97706] font-bold mt-0.5">
-                            <AlertTriangle className="w-3 h-3 text-[#D97706]" />
-                            Férias
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Delegado */}
-                      <td className="py-2.5 px-3">
-                        <span className="font-medium text-[#1F2937]">
-                          {getServidorNome(esc?.delegado)}
-                        </span>
-                      </td>
-
-                      {/* Escrivão */}
-                      <td className="py-2.5 px-3">
-                        <span className="font-medium text-[#1F2937]">
-                          {getServidorNome(esc?.escrivao)}
-                        </span>
-                      </td>
-
-                      {/* Agentes */}
-                      <td className="py-2.5 px-3">
-                        {esc ? (
-                          <div className="space-y-0.5">
-                            <p className="text-[#1F2937]">
-                              <strong>1:</strong> {getServidorNome(esc.agente1)}
-                            </p>
-                            <p className="text-[#1F2937]">
-                              <strong>2:</strong> {getServidorNome(esc.agente2)}
-                            </p>
-                            {esc.agente3 && (
-                              <p className="text-[#0B2545] font-semibold">
-                                <strong>3:</strong> {getServidorNome(esc.agente3)}
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-[#6B7280] italic">Não preenchido</span>
-                        )}
-                      </td>
-
-                      {/* Horários Calculados */}
-                      <td className="py-2.5 px-3">
-                        <div className="text-[10px] space-y-0.5 font-mono">
-                          <p className="font-semibold text-[#0B2545] font-sans">
-                            {horarios.plantaoDesc}
-                          </p>
-                          <p className="text-[#6B7280]">
-                            Ag1: <span className="text-[#1F2937]">{horarios.agente1}</span>
-                          </p>
-                          <p className="text-[#6B7280]">
-                            Ag2: <span className="text-[#1F2937]">{horarios.agente2}</span>
-                          </p>
-                          {horarios.agente3 && (
-                            <p className="text-[#6B7280]">
-                              Ag3: <span className="text-[#1F2937]">{horarios.agente3}</span>
-                            </p>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Ação */}
-                      <td className="py-2.5 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setWhatsappDia(d)
-                              setWhatsappDestinatario('geral')
-                            }}
-                            className="h-8 text-xs border-emerald-600 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center gap-1"
-                            title="Enviar escala do dia via WhatsApp"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                            <span className="hidden sm:inline">WhatsApp</span>
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenEditDia(d)}
-                            className="h-8 text-xs border-[#0B2545] text-[#0B2545] hover:bg-[#0B2545] hover:text-white transition-colors"
-                          >
-                            {esc ? 'Editar' : 'Escalar'}
-                          </Button>
-                        </div>
+      {abaAtiva === 'horas' ? (
+        <RelatorioHoras
+          mes={mes}
+          ano={ano}
+          escalas={escalas}
+          servidores={servidores}
+          feriados={feriados}
+          onImprimir={() => window.print()}
+        />
+      ) : (
+        <>
+          {/* Grade Mensal Automática */}
+          <div className="bg-white rounded-xl border border-[#E5E9F0] shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-[#F5F7FA] border-b border-[#E5E9F0] text-[#0B2545] font-semibold uppercase tracking-wider text-[11px]">
+                    <th className="py-3 px-3 w-16 text-center">Data</th>
+                    <th className="py-3 px-3 w-28">Dia / Tipo</th>
+                    <th className="py-3 px-3">Delegado</th>
+                    <th className="py-3 px-3">Escrivão</th>
+                    <th className="py-3 px-3">Agentes Operacionais</th>
+                    <th className="py-3 px-3">Horários Previstos</th>
+                    <th className="py-3 px-3 text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E5E9F0]">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-sm text-[#6B7280]">
+                        Carregando grade operacional do mês...
                       </td>
                     </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  ) : (
+                    gradeMensal.map((item) => {
+                      const d = item.dia
+                      const diaSemana = item.dataObj.toLocaleDateString('pt-BR', {
+                        weekday: 'short',
+                      })
+                      const esc = item.escala
+                      const temAgente3 = !!esc?.agente3
+                      const horarios = calcularHorariosAgentes(item.tipoDia, temAgente3)
+
+                      // Verificar se tem algum servidor de férias escalado nesse dia
+                      const hasFeriasAlert = (() => {
+                        if (!esc) return false
+                        const ids = [
+                          esc.delegado,
+                          esc.escrivao,
+                          esc.agente1,
+                          esc.agente2,
+                          esc.agente3,
+                        ].filter(Boolean)
+                        for (const id of ids) {
+                          if (feriasService.isServidorEmFerias(ferias, id!, item.dataObj)) {
+                            return true
+                          }
+                        }
+                        return false
+                      })()
+
+                      const isFeriado = item.tipoDia === 'Feriado'
+                      const isFds = item.tipoDia === 'Sábado' || item.tipoDia === 'Domingo'
+                      const isSexta = item.tipoDia === 'Sexta-Feira'
+
+                      return (
+                        <tr
+                          key={d}
+                          className={`hover:bg-[#F5F7FA] transition-colors ${
+                            hasFeriasAlert
+                              ? 'bg-[#FDF3E7]'
+                              : isFeriado
+                                ? 'bg-[#FFFDF5]'
+                                : isFds
+                                  ? 'bg-[#F8FAFC]'
+                                  : d % 2 === 1
+                                    ? 'bg-white'
+                                    : 'bg-[#F9FAFB]'
+                          }`}
+                        >
+                          {/* Data */}
+                          <td className="py-2.5 px-3 text-center font-bold text-sm text-[#0B2545]">
+                            <span className="block">{String(d).padStart(2, '0')}</span>
+                            <span className="text-[10px] text-[#6B7280] font-normal uppercase">
+                              {diaSemana}
+                            </span>
+                          </td>
+
+                          {/* Tipo de Dia */}
+                          <td className="py-2.5 px-3">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] font-semibold ${
+                                isFeriado
+                                  ? 'bg-[#FDF6E3] text-[#C9A227] border-[#C9A227]'
+                                  : isSexta
+                                    ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                    : isFds
+                                      ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                      : 'bg-gray-100 text-gray-700 border-gray-200'
+                              }`}
+                            >
+                              {item.tipoDia}
+                            </Badge>
+                            {item.feriadoInfo && (
+                              <p
+                                className="text-[10px] text-[#C9A227] font-medium mt-0.5 truncate max-w-[140px]"
+                                title={item.feriadoInfo.nome}
+                              >
+                                ★ {item.feriadoInfo.nome}
+                              </p>
+                            )}
+                            {hasFeriasAlert && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-[#D97706] font-bold mt-0.5">
+                                <AlertTriangle className="w-3 h-3 text-[#D97706]" />
+                                Férias
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Delegado */}
+                          <td className="py-2.5 px-3">
+                            <span className="font-medium text-[#1F2937]">
+                              {getServidorNome(esc?.delegado)}
+                            </span>
+                          </td>
+
+                          {/* Escrivão */}
+                          <td className="py-2.5 px-3">
+                            <span className="font-medium text-[#1F2937]">
+                              {getServidorNome(esc?.escrivao)}
+                            </span>
+                          </td>
+
+                          {/* Agentes */}
+                          <td className="py-2.5 px-3">
+                            {esc ? (
+                              <div className="space-y-0.5">
+                                <p className="text-[#1F2937]">
+                                  <strong>1:</strong> {getServidorNome(esc.agente1)}
+                                </p>
+                                <p className="text-[#1F2937]">
+                                  <strong>2:</strong> {getServidorNome(esc.agente2)}
+                                </p>
+                                {esc.agente3 && (
+                                  <p className="text-[#0B2545] font-semibold">
+                                    <strong>3:</strong> {getServidorNome(esc.agente3)}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[#6B7280] italic">Não preenchido</span>
+                            )}
+                          </td>
+
+                          {/* Horários Calculados */}
+                          <td className="py-2.5 px-3">
+                            <div className="text-[10px] space-y-0.5 font-mono">
+                              <p className="font-semibold text-[#0B2545] font-sans">
+                                {horarios.plantaoDesc}
+                              </p>
+                              <p className="text-[#6B7280]">
+                                Ag1: <span className="text-[#1F2937]">{horarios.agente1}</span>
+                              </p>
+                              <p className="text-[#6B7280]">
+                                Ag2: <span className="text-[#1F2937]">{horarios.agente2}</span>
+                              </p>
+                              {horarios.agente3 && (
+                                <p className="text-[#6B7280]">
+                                  Ag3: <span className="text-[#1F2937]">{horarios.agente3}</span>
+                                </p>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Ação */}
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setWhatsappDia(d)
+                                  setWhatsappDestinatario('geral')
+                                }}
+                                className="h-8 text-xs border-emerald-600 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center gap-1"
+                                title="Enviar escala do dia via WhatsApp"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                <span className="hidden sm:inline">WhatsApp</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenEditDia(d)}
+                                className="h-8 text-xs border-[#0B2545] text-[#0B2545] hover:bg-[#0B2545] hover:text-white transition-colors"
+                              >
+                                {esc ? 'Editar' : 'Escalar'}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Modal Edição do Dia da Escala */}
       <Dialog open={editingDia !== null} onOpenChange={(open) => !open && setEditingDia(null)}>

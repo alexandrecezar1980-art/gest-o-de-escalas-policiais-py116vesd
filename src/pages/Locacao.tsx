@@ -171,7 +171,7 @@ export default function Locacao() {
     setIsModalOpen(true)
   }
 
-  // Adicionar escrivão com confirmação se > 2 (Item 3)
+  // Adicionar escrivão com confirmação se > 2
   const handleAdicionarEscrivao = (id: string) => {
     if (!id) return
     if (formEscrivaes.includes(id)) {
@@ -185,8 +185,8 @@ export default function Locacao() {
       toast.success('Escrivão adicionado à unidade.')
     }
 
-    // Se já tiver 2 ou mais escrivães (limite padrão recomendado)
-    if (formEscrivaes.length >= 3) {
+    // Se já tiver 2 ou mais escrivães (limite padrão recomendado: 02)
+    if (formEscrivaes.length >= 2) {
       setMotivoConfirmacao(
         `A unidade passará a ter ${formEscrivaes.length + 1} escrivães (padrão recomendado: 02).`,
       )
@@ -201,11 +201,20 @@ export default function Locacao() {
     setFormEscrivaes((prev) => prev.filter((x) => x !== id))
   }
 
-  // Adicionar agente com confirmação se > 8 (Item 3)
+  // Adicionar agente com confirmação se > 8 e limite máximo rígido de 20
   const handleAdicionarAgente = (id: string) => {
     if (!id) return
     if (formAgentes.includes(id)) {
       toast.info('Este agente já está adicionado nesta unidade.')
+      return
+    }
+
+    // Limite duro de 20 agentes
+    if (formAgentes.length >= 20) {
+      toast.error(
+        'Limite máximo atingido: Esta unidade já possui 20 agentes alocados (limite máximo permitido).',
+      )
+      setNovoAgenteId('')
       return
     }
 
@@ -215,10 +224,10 @@ export default function Locacao() {
       toast.success('Agente/Investigador adicionado à unidade.')
     }
 
-    // Se já tiver 8 ou mais agentes (limite padrão recomendado)
+    // Se já tiver 8 ou mais agentes (limite padrão recomendado: 08; limite duro: 20)
     if (formAgentes.length >= 8) {
       setMotivoConfirmacao(
-        `A unidade passará a ter ${formAgentes.length + 1} agentes (padrão recomendado: 08).`,
+        `A unidade passará a ter ${formAgentes.length + 1} agentes (padrão recomendado: 08, limite máximo: 20).`,
       )
       setAcaoConfirmacaoPendente(() => operacao)
       setModalConfirmacaoExcessoOpen(true)
@@ -465,11 +474,11 @@ export default function Locacao() {
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-[#6B7280] uppercase tracking-wider text-[10px] block">
-                          Escrivães ({escrivaesList.length}):
+                          Escrivães vinculados: {escrivaesList.length}
                         </span>
                         {escrivaesList.length > 2 && (
                           <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                            Acima do padrão
+                            Acima do padrão ({escrivaesList.length})
                           </span>
                         )}
                       </div>
@@ -493,18 +502,18 @@ export default function Locacao() {
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-[#6B7280] uppercase tracking-wider text-[10px] block">
-                          Agentes / Investigadores ({agentesList.length}):
+                          Agentes vinculados: {agentesList.length} / 20
                         </span>
-                        {agentesList.length > 10 && (
+                        {agentesList.length > 8 && (
                           <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                            Acima do padrão
+                            Acima do padrão ({agentesList.length}/20)
                           </span>
                         )}
                       </div>
                       {agentesList.length === 0 ? (
                         <p className="text-[#6B7280] italic">Nenhum agente vinculado</p>
                       ) : (
-                        <div className="flex flex-wrap gap-1.5 mt-1">
+                        <div className="flex flex-wrap gap-1.5 mt-1 max-h-40 overflow-y-auto p-1 border border-slate-100 rounded-md">
                           {agentesList.map((id) => (
                             <Badge
                               key={id}
@@ -661,9 +670,21 @@ export default function Locacao() {
             {/* Escrivães com Autocomplete + lista de alocados */}
             <div className="space-y-2 pt-2 border-t border-[#E5E9F0]">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold text-[#1F2937]">
-                  Escrivães de Polícia ({formEscrivaes.length})
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-semibold text-[#1F2937]">
+                    Escrivães de Polícia
+                  </Label>
+                  <Badge
+                    variant="outline"
+                    className={`text-[11px] font-bold px-2 py-0.5 transition-colors ${
+                      formEscrivaes.length > 2
+                        ? 'bg-amber-50 text-amber-800 border-amber-300'
+                        : 'bg-blue-50 text-[#0B2545] border-blue-200'
+                    }`}
+                  >
+                    Escrivães vinculados: {formEscrivaes.length}
+                  </Badge>
+                </div>
                 <span className="text-[11px] text-[#6B7280]">
                   Padrão recomendado: até 02 Escrivães
                 </span>
@@ -737,37 +758,63 @@ export default function Locacao() {
             {/* Agentes / Investigadores com Autocomplete + lista de alocados */}
             <div className="space-y-2 pt-2 border-t border-[#E5E9F0]">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold text-[#1F2937]">
-                  Agentes / Investigadores ({formAgentes.length})
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-semibold text-[#1F2937]">
+                    Agentes / Investigadores
+                  </Label>
+                  {/* Contador dinâmico em tempo real */}
+                  <Badge
+                    variant="outline"
+                    className={`text-[11px] font-bold px-2 py-0.5 transition-colors ${
+                      formAgentes.length >= 20
+                        ? 'bg-red-50 text-red-700 border-red-300'
+                        : formAgentes.length > 8
+                          ? 'bg-amber-50 text-amber-800 border-amber-300'
+                          : 'bg-blue-50 text-[#0B2545] border-blue-200'
+                    }`}
+                  >
+                    Agentes vinculados: {formAgentes.length} / 20
+                  </Badge>
+                </div>
                 <span className="text-[11px] text-[#6B7280]">
-                  Padrão recomendado: até 08 Agentes
+                  Padrão recomendado: 08 | Limite máximo: 20
                 </span>
               </div>
 
               {/* Seletor Autocomplete para adicionar agente */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <ServidorAutocomplete
-                    servidores={agentesDisponiveis}
-                    value={novoAgenteId}
-                    onChange={(id) => {
-                      setNovoAgenteId(id)
-                      if (id) handleAdicionarAgente(id)
-                    }}
-                    placeholder="Adicionar Agente/Investigador por nome, matrícula..."
-                    filtroCargo="Agente/Investigador"
-                    disabledIds={formAgentes}
-                    disabledMessage="Já adicionado nesta unidade"
-                  />
+              {formAgentes.length >= 20 ? (
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+                  <span>
+                    Limite máximo de 20 Agentes atingido para esta unidade. Para adicionar outro
+                    agente, remova um existente primeiro.
+                  </span>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <ServidorAutocomplete
+                      servidores={agentesDisponiveis}
+                      value={novoAgenteId}
+                      onChange={(id) => {
+                        setNovoAgenteId(id)
+                        if (id) handleAdicionarAgente(id)
+                      }}
+                      placeholder="Adicionar Agente/Investigador por nome, matrícula..."
+                      filtroCargo="Agente/Investigador"
+                      disabledIds={formAgentes}
+                      disabledMessage="Já adicionado nesta unidade"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Chips / Badges de Agentes Adicionados */}
-              <div className="border border-[#D1D5DB] rounded-lg p-2.5 min-h-20 bg-[#F9FAFB] space-y-1.5">
+              <div className="border border-[#D1D5DB] rounded-lg p-2.5 min-h-20 max-h-56 overflow-y-auto bg-[#F9FAFB] space-y-1.5">
                 {formAgentes.length === 0 ? (
                   <p className="text-[#9CA3AF] italic text-xs py-1">
-                    Nenhum agente vinculado. Use o campo acima para buscar e adicionar.
+                    Nenhum agente vinculado. Use o campo acima para buscar e adicionar até 20
+                    agentes.
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -783,6 +830,7 @@ export default function Locacao() {
                               : 'bg-white text-gray-800 border-gray-300'
                           }`}
                         >
+                          <span className="text-[10px] font-bold text-gray-400">#{idx + 1}</span>
                           <span className="font-medium">{s?.nome || id}</span>
                           {s?.matricula && (
                             <span className="text-[10px] text-gray-500 font-mono">

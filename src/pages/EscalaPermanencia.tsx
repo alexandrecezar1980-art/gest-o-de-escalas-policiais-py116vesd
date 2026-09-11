@@ -11,6 +11,7 @@ import {
   Check,
   Edit2,
 } from 'lucide-react'
+import BrasaoPCPB from '@/components/BrasaoPCPB'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -539,54 +540,96 @@ export default function EscalaPermanencia() {
         )}
       </div>
 
-      {/* ÁREA DE IMPRESSÃO (Visível apenas ao imprimir) */}
-      <div className="hidden print:block print:p-0 print:border-none">
-        <div className="border-b-2 border-[#0B2545] pb-4 mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-[#0B2545] uppercase">
-              Secretaria de Estado da Segurança e Defesa Social • Polícia Civil
-            </h2>
-            <p className="text-xs font-semibold text-[#1F2937]">
-              ESCALA DE PERMANÊNCIA (DIAS ÚTEIS DE EXPEDIENTE) — {mesesNomes[mes - 1].toUpperCase()}
-              /{ano}
-            </p>
+      {/* ÁREA DE IMPRESSÃO LIMPA DA ESCALA DE PERMANÊNCIA (Item 4) */}
+      <div className="hidden print:block print:p-0 print:border-none print-portrait bg-white">
+        {/* Cabeçalho Oficial PCPB */}
+        <div className="border-b-2 border-[#0B2545] pb-3 mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 flex items-center justify-center shrink-0">
+              <BrasaoPCPB className="h-14 w-auto max-w-[56px]" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-[#0B2545] tracking-wider uppercase">
+                POLÍCIA CIVIL DO ESTADO DA PARAÍBA
+              </p>
+              <h2 className="text-base font-bold text-[#0B2545] uppercase tracking-wide leading-tight">
+                20ª DELEGACIA SECCIONAL DE POLÍCIA CIVIL
+              </h2>
+              <p className="text-xs font-semibold text-[#1F2937]">
+                ESCALA DE PERMANÊNCIA (DIAS ÚTEIS DE EXPEDIENTE) —{' '}
+                {mesesNomes[mes - 1].toUpperCase()}/{ano}
+              </p>
+              <p className="text-[10px] text-[#6B7280]">
+                Atendimento Contínuo • Duplas de Servidores Policiais Designados
+              </p>
+            </div>
           </div>
           <div className="text-right text-[10px] text-[#6B7280]">
+            <p className="font-semibold text-[#0B2545]">Documento Oficial</p>
             <p>Emissão: {new Date().toLocaleDateString('pt-BR')}</p>
           </div>
         </div>
 
-        <table className="w-full border-collapse text-[10px] border border-[#0B2545]">
-          <thead>
-            <tr className="bg-[#0B2545] text-white">
-              <th className="py-2 px-2 border border-[#0B2545] text-center w-16">DATA</th>
-              <th className="py-2 px-2 border border-[#0B2545] text-left w-28">DIA DA SEMANA</th>
-              <th className="py-2 px-2 border border-[#0B2545] text-left">SERVIDOR PERMANENTE 1</th>
-              <th className="py-2 px-2 border border-[#0B2545] text-left">SERVIDOR PERMANENTE 2</th>
-            </tr>
-          </thead>
-          <tbody>
-            {gruposDiasUteis.flatMap((g) =>
-              g.dias.map((d) => {
-                const aloc = alocacoes[d.dia]
-                return (
-                  <tr key={d.dia} className="border-b border-gray-200">
-                    <td className="py-1.5 px-2 text-center font-bold border-r border-gray-200">
-                      {String(d.dia).padStart(2, '0')}/{String(mes).padStart(2, '0')}
-                    </td>
-                    <td className="py-1.5 px-2 font-medium border-r border-gray-200">
-                      {g.nomeSingular}
-                    </td>
-                    <td className="py-1.5 px-2 border-r border-gray-200">
-                      {getNomeServidor(aloc?.agente1)}
-                    </td>
-                    <td className="py-1.5 px-2">{getNomeServidor(aloc?.agente2)}</td>
-                  </tr>
-                )
-              }),
-            )}
-          </tbody>
-        </table>
+        {/* Tabela Organizada por Dia da Semana (Segunda a Sexta), datas e duplas */}
+        <div className="space-y-4">
+          <table className="w-full border-collapse text-[11px] border border-[#0B2545]">
+            <thead>
+              <tr className="bg-[#0B2545] text-white">
+                <th className="py-2 px-2.5 border border-[#0B2545] text-center w-16">DATA</th>
+                <th className="py-2 px-2.5 border border-[#0B2545] text-left w-32">
+                  DIA DA SEMANA
+                </th>
+                <th className="py-2 px-2.5 border border-[#0B2545] text-left">
+                  1º SERVIDOR PERMANENTE
+                </th>
+                <th className="py-2 px-2.5 border border-[#0B2545] text-left">
+                  2º SERVIDOR PERMANENTE
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {gruposDiasUteis.flatMap((g) =>
+                g.dias.map((d, dIdx) => {
+                  const aloc = alocacoes[d.dia]
+                  return (
+                    <tr
+                      key={d.dia}
+                      className={`border-b border-gray-300 ${dIdx % 2 === 1 ? 'bg-[#F9FAFB]' : 'bg-white'}`}
+                    >
+                      <td className="py-1.5 px-2.5 text-center font-bold text-[#0B2545] border-r border-gray-300">
+                        {String(d.dia).padStart(2, '0')}/{String(mes).padStart(2, '0')}
+                      </td>
+                      <td className="py-1.5 px-2.5 font-semibold text-[#1F2937] border-r border-gray-300">
+                        {g.nomeSingular}
+                      </td>
+                      <td className="py-1.5 px-2.5 font-medium text-gray-900 border-r border-gray-300">
+                        {getNomeServidor(aloc?.agente1)}
+                      </td>
+                      <td className="py-1.5 px-2.5 font-medium text-gray-900">
+                        {getNomeServidor(aloc?.agente2)}
+                      </td>
+                    </tr>
+                  )
+                }),
+              )}
+            </tbody>
+          </table>
+
+          {/* Rodapé de Homologação na Impressão */}
+          <div className="mt-8 pt-6 border-t border-gray-300 flex justify-between items-end text-[10px] break-inside-avoid">
+            <div>
+              <p className="font-semibold text-[#0B2545]">
+                20ª Delegacia Seccional de Polícia Civil
+              </p>
+              <p className="text-gray-500">Escala de Permanência Homologada</p>
+            </div>
+            <div className="text-center">
+              <div className="w-52 border-b border-black mb-1" />
+              <p className="font-bold text-[#0B2545]">Delegado Seccional de Polícia Civil</p>
+              <p className="text-gray-500">20ª DSPC / PCPB</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

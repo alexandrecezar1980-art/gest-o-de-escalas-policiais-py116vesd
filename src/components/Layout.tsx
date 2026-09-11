@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import {
   LayoutDashboard,
@@ -17,7 +17,11 @@ import {
   Menu,
   X,
   Eye,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
+  Printer,
+  Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import BrasaoPCPB from '@/components/BrasaoPCPB'
@@ -29,17 +33,49 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import CentralImpressaoModal from '@/components/CentralImpressaoModal'
 
 export default function Layout() {
   const { user, isAdmin, isVisitor, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Sidebar retrátil (estado persistido em localStorage se desejar)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('pcpb_sidebar_collapsed')
+      return saved === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  // Drawer mobile
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Modal Central de Impressão
+  const [centralImpressaoOpen, setCentralImpressaoOpen] = useState(false)
+
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem('pcpb_sidebar_collapsed', String(next))
+      } catch {
+        // ignore
+      }
+      return next
+    })
+  }
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
+  // 10 itens especificados:
+  // Painel, Servidores, Lotação, Férias, Escala Mensal, Relatório, Atribuições, Escala de Delegados, Escala de Custódias, Permanência
   const navItems = [
     { label: 'Painel', to: '/', icon: LayoutDashboard, adminOnly: true },
     { label: 'Servidores', to: '/servidores', icon: Users, adminOnly: true },
@@ -64,110 +100,129 @@ export default function Layout() {
   })
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F5F7FA]">
-      {/* Banner de Modo Visitante */}
-      {isVisitor && !isAdmin && (
-        <div className="no-print bg-[#0B2545] text-white text-xs sm:text-sm py-2 px-4 shadow-inner flex items-center justify-between">
-          <div className="max-w-[1440px] mx-auto w-full flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-[#C9A227]" />
-              <span>
-                <strong>Modo Visitante:</strong> Você está visualizando as escalas em modo somente
-                leitura (filtros e impressão habilitados).
+    <TooltipProvider delayDuration={150}>
+      <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
+        {/* Banner de Modo Visitante */}
+        {isVisitor && !isAdmin && (
+          <div className="no-print bg-[#0B2545] text-white text-xs sm:text-sm py-2 px-4 shadow-inner flex items-center justify-between shrink-0">
+            <div className="w-full flex items-center justify-between max-w-[1920px] mx-auto">
+              <span className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-[#C9A227]" />
+                <span>
+                  <strong>Modo Visitante:</strong> Você está visualizando as escalas em modo somente
+                  leitura (filtros e impressão habilitados).
+                </span>
               </span>
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate('/login')}
-              className="text-white border-white/30 hover:bg-white/10 hover:text-white h-7 text-xs"
-            >
-              <LogIn className="w-3.5 h-3.5 mr-1" />
-              Entrar como Admin
-            </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate('/login')}
+                className="text-white border-white/30 hover:bg-white/10 hover:text-white h-7 text-xs"
+              >
+                <LogIn className="w-3.5 h-3.5 mr-1" />
+                Entrar como Admin
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Top Navbar */}
-      <header className="no-print sticky top-0 z-40 bg-white border-b border-[#E5E9F0] shadow-sm backdrop-blur-md bg-white/95">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Logo Brand */}
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => navigate(isAdmin ? '/' : '/escala-publica')}
-              className="flex items-center gap-3 text-left group"
+        {/* Top Header Barra Superior (Global) */}
+        <header className="no-print sticky top-0 z-30 bg-white border-b border-[#E5E9F0] shadow-xs backdrop-blur-md bg-white/95 h-16 shrink-0 flex items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            {/* Mobile Hamburger Trigger */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden text-[#0B2545] h-9 w-9"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Abrir Menu"
             >
-              <div className="h-11 w-10 flex items-center justify-center transition-transform group-hover:scale-105">
-                <BrasaoPCPB className="h-10 w-auto max-w-[40px] drop-shadow-sm" />
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+
+            {/* Desktop Toggle Sidebar Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleSidebar}
+              className="hidden lg:flex text-[#0B2545] hover:bg-slate-100 h-9 w-9"
+              title={sidebarCollapsed ? 'Expandir Menu Lateral' : 'Recolher Menu Lateral'}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight className="w-5 h-5 text-[#0B2545]" />
+              ) : (
+                <ChevronLeft className="w-5 h-5 text-[#0B2545]" />
+              )}
+            </Button>
+
+            {/* Identidade Top Header */}
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-8 flex items-center justify-center shrink-0">
+                <BrasaoPCPB className="h-8 w-auto max-w-[32px] drop-shadow-xs" />
               </div>
-              <div className="hidden sm:block">
-                <h1 className="font-bold text-base text-[#0B2545] leading-tight flex items-center gap-1.5">
-                  <br />
+              <div className="leading-tight">
+                <h1 className="font-bold text-sm sm:text-base text-[#0B2545] tracking-tight flex items-center gap-1.5">
+                  20ª DSPC <span className="text-gray-300 font-normal">|</span> Gestão de Escalas
                 </h1>
-                <p className="text-[11px] text-[#6B7280]">
-                  <br />
+                <p className="text-[10px] text-[#6B7280] hidden sm:block">
+                  Polícia Civil do Estado da Paraíba
                 </p>
               </div>
-            </button>
+            </div>
           </div>
 
-          {/* Desktop Nav Items */}
-          <nav className="hidden lg:flex items-center gap-1 overflow-x-auto py-1 max-w-[calc(100vw-360px)] no-scrollbar">
-            {visibleNavItems.map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/'}
-                  className={({ isActive }) =>
-                    `flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
-                      isActive
-                        ? 'bg-[#0B2545] text-white shadow-xs font-semibold'
-                        : 'text-[#4B5563] hover:text-[#0B2545] hover:bg-[#F5F7FA]'
-                    }`
-                  }
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{item.label}</span>
-                </NavLink>
-              )
-            })}
-          </nav>
-          {/* User Section & Mobile Trigger */}
-          <div className="flex items-center gap-2">
+          {/* Ações Top Header: Central de Impressão + Perfil */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Botão Central de Impressão Proeminente no Header */}
+            {isAdmin && (
+              <Button
+                onClick={() => setCentralImpressaoOpen(true)}
+                className="bg-[#0B2545] hover:bg-[#081A33] text-white text-xs h-9 px-3 flex items-center gap-1.5 shadow-sm font-medium transition-all"
+                title="Central Unificada de Impressão em Lote"
+              >
+                <Printer className="w-4 h-4 text-[#C9A227]" />
+                <span className="hidden sm:inline">Central de Impressão</span>
+                <span className="sm:hidden">Imprimir</span>
+              </Button>
+            )}
+
             {isAdmin ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-2 px-2.5 sm:px-3 py-2 rounded-lg border border-[#E5E9F0] hover:bg-[#F5F7FA]"
+                    className="flex items-center gap-2 px-2 sm:px-3 py-1.5 h-9 rounded-lg border border-[#E5E9F0] hover:bg-[#F5F7FA]"
                   >
-                    <div className="w-7 h-7 rounded-full bg-[#0B2545] text-white flex items-center justify-center font-semibold text-xs">
+                    <div className="w-6 h-6 rounded-full bg-[#0B2545] text-white flex items-center justify-center font-bold text-[10px]">
                       {user?.name ? user.name.slice(0, 2).toUpperCase() : 'AD'}
                     </div>
-                    <div className="text-left hidden lg:block text-xs">
+                    <div className="text-left hidden md:block text-xs">
                       <p className="font-semibold text-[#0B2545] leading-tight max-w-[120px] truncate">
                         {user?.name || user?.email || 'Administrador'}
                       </p>
-                      <p className="text-[#6B7280] text-[10px]">Polícia Civil</p>
+                      <p className="text-[#6B7280] text-[9px]">PCPB Admin</p>
                     </div>
-                    <ChevronDown className="w-4 h-4 text-[#6B7280]" />
+                    <ChevronDown className="w-3.5 h-3.5 text-[#6B7280]" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
-                    <p className="font-medium text-sm text-[#0B2545]">
+                    <p className="font-semibold text-xs text-[#0B2545]">
                       {user?.name || 'Administrador'}
                     </p>
-                    <p className="text-xs text-[#6B7280] font-normal truncate">{user?.email}</p>
+                    <p className="text-[11px] text-[#6B7280] font-normal truncate">{user?.email}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    onClick={() => setCentralImpressaoOpen(true)}
+                    className="cursor-pointer text-xs"
+                  >
+                    <Printer className="w-4 h-4 mr-2 text-[#0B2545]" />
+                    Central de Impressão Multiescalas
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={() => navigate('/escala-publica')}
-                    className="cursor-pointer"
+                    className="cursor-pointer text-xs"
                   >
                     <Eye className="w-4 h-4 mr-2 text-[#0B2545]" />
                     Ver Link Público
@@ -175,7 +230,7 @@ export default function Layout() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                    className="cursor-pointer text-xs text-red-600 focus:text-red-600 focus:bg-red-50"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
                     Sair do Sistema
@@ -187,101 +242,255 @@ export default function Layout() {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate('/login')}
-                className="hidden sm:inline-flex items-center gap-1.5 border-[#0B2545] text-[#0B2545] hover:bg-[#0B2545] hover:text-white"
+                className="inline-flex items-center gap-1.5 border-[#0B2545] text-[#0B2545] hover:bg-[#0B2545] hover:text-white h-9 text-xs"
               >
-                <LogIn className="w-4 h-4" />
+                <LogIn className="w-3.5 h-3.5" />
                 Login Admin
               </Button>
             )}
-
-            {/* Mobile Hamburger Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden text-[#0B2545]"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Abrir Menu"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </Button>
           </div>
-        </div>
+        </header>
 
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-[#E5E9F0] bg-white px-4 pt-2 pb-6 space-y-1 animate-fade-in-down shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto">
-            {visibleNavItems.map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/'}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium ${
-                      isActive
-                        ? 'bg-[#0B2545] text-white'
-                        : 'text-[#1F2937] hover:bg-[#F5F7FA] hover:text-[#0B2545]'
-                    }`
-                  }
-                >
-                  <Icon className="w-5 h-5" />
-                  {item.label}
-                </NavLink>
-              )
-            })}
-
-            <div className="pt-3 border-t border-[#E5E9F0] mt-2">
-              {isAdmin ? (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setMobileMenuOpen(false)
-                    handleLogout()
-                  }}
-                  className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sair da Conta
-                </Button>
+        {/* Corpo Principal com Sidebar + Área de Conteúdo */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* SIDEBAR RETRÁTIL (DESKTOP) */}
+          <aside
+            className={`no-print hidden lg:flex flex-col bg-white border-r border-[#E5E9F0] transition-all duration-300 ease-in-out shrink-0 select-none ${
+              sidebarCollapsed ? 'w-16' : 'w-64'
+            }`}
+          >
+            {/* Header da Sidebar */}
+            <div className="p-4 border-b border-[#E5E9F0] flex items-center justify-between">
+              {!sidebarCollapsed ? (
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="w-8 h-8 rounded-lg bg-[#0B2545] text-white flex items-center justify-center shrink-0">
+                    <Shield className="w-4 h-4 text-[#C9A227]" />
+                  </div>
+                  <div className="truncate">
+                    <p className="font-bold text-xs text-[#0B2545] leading-tight">
+                      Painel Operacional
+                    </p>
+                    <p className="text-[10px] text-[#6B7280]">Gestão de Escalas</p>
+                  </div>
+                </div>
               ) : (
-                <Button
-                  onClick={() => {
-                    setMobileMenuOpen(false)
-                    navigate('/login')
-                  }}
-                  className="w-full bg-[#0B2545] text-white hover:bg-[#081A33]"
-                >
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Fazer Login como Administrador
-                </Button>
+                <div className="w-full flex justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#0B2545] text-white flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-[#C9A227]" />
+                  </div>
+                </div>
               )}
             </div>
-          </div>
-        )}
-      </header>
 
-      {/* Main Container */}
-      <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Outlet />
-      </main>
+            {/* Itens de Navegação (10 itens) */}
+            <nav className="flex-1 p-2 space-y-1 overflow-y-auto no-scrollbar">
+              {visibleNavItems.map((item) => {
+                const Icon = item.icon
+                const isActive =
+                  item.to === '/'
+                    ? location.pathname === '/'
+                    : location.pathname.startsWith(item.to.split('#')[0]) &&
+                      (item.to.includes('#') ? location.hash === `#${item.to.split('#')[1]}` : true)
 
-      {/* Institutional Footer */}
-      <footer className="no-print bg-white border-t border-[#E5E9F0] py-4 text-center text-xs text-[#6B7280]">
-        <div className="max-w-[1440px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <BrasaoPCPB className="w-4 h-auto" />
-            <span className="font-medium text-[#0B2545]">20 DSPC</span>
-            <span>•</span>
-            <span>Polícia Civil da Paraíba</span>
-          </div>
-          <p>
-            © {new Date().getFullYear()} Gestão de Escalas Operacionais Policiais. Todos os direitos
-            reservados.
-          </p>
+                // Item recolhido com Tooltip
+                if (sidebarCollapsed) {
+                  return (
+                    <Tooltip key={item.to}>
+                      <TooltipTrigger asChild>
+                        <NavLink
+                          to={item.to}
+                          end={item.to === '/'}
+                          className={`flex items-center justify-center w-12 h-11 mx-auto rounded-lg transition-colors ${
+                            isActive
+                              ? 'bg-[#0B2545] text-white shadow-xs font-semibold'
+                              : 'text-[#4B5563] hover:text-[#0B2545] hover:bg-[#F5F7FA]'
+                          }`}
+                        >
+                          <Icon className="w-5 h-5 shrink-0" />
+                          <span className="sr-only">{item.label}</span>
+                        </NavLink>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="right"
+                        className="bg-[#0B2545] text-white text-xs font-medium border-none shadow-md"
+                      >
+                        {item.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                }
+
+                // Item expandido com Ícone + Rótulo
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'bg-[#0B2545] text-white shadow-xs font-semibold'
+                        : 'text-[#4B5563] hover:text-[#0B2545] hover:bg-[#F5F7FA]'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </NavLink>
+                )
+              })}
+            </nav>
+
+            {/* Rodapé da Sidebar */}
+            <div className="p-3 border-t border-[#E5E9F0]">
+              {!sidebarCollapsed ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BrasaoPCPB className="w-4 h-auto" />
+                    <span className="text-[10px] text-[#6B7280] font-medium">PCPB • 20ª DSPC</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleToggleSidebar}
+                    className="h-7 w-7 p-0 text-slate-500 hover:text-[#0B2545]"
+                    title="Recolher Sidebar"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleToggleSidebar}
+                    className="h-8 w-8 p-0 text-slate-500 hover:text-[#0B2545]"
+                    title="Expandir Sidebar"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* DRAWER MOBILE (RESPONSIVO) */}
+          {mobileMenuOpen && (
+            <div className="no-print lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex">
+              <div className="w-72 bg-white h-full shadow-2xl flex flex-col animate-fade-in">
+                {/* Header do Drawer */}
+                <div className="p-4 border-b border-[#E5E9F0] flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <BrasaoPCPB className="h-8 w-auto max-w-[32px]" />
+                    <div>
+                      <h2 className="font-bold text-sm text-[#0B2545]">Gestão de Escalas</h2>
+                      <p className="text-[10px] text-[#6B7280]">20ª DSPC / PCPB</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="h-8 w-8 text-slate-500"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                {/* Itens do Drawer */}
+                <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+                  {isAdmin && (
+                    <Button
+                      onClick={() => {
+                        setMobileMenuOpen(false)
+                        setCentralImpressaoOpen(true)
+                      }}
+                      className="w-full bg-[#0B2545] hover:bg-[#081A33] text-white text-xs h-9 mb-2 flex items-center justify-start gap-2 shadow-xs"
+                    >
+                      <Printer className="w-4 h-4 text-[#C9A227]" />
+                      Central de Impressão Multiescalas
+                    </Button>
+                  )}
+
+                  {visibleNavItems.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.to === '/'}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                            isActive
+                              ? 'bg-[#0B2545] text-white shadow-xs font-semibold'
+                              : 'text-[#1F2937] hover:bg-[#F5F7FA] hover:text-[#0B2545]'
+                          }`
+                        }
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    )
+                  })}
+                </nav>
+
+                {/* Rodapé do Drawer */}
+                <div className="p-3 border-t border-[#E5E9F0]">
+                  {isAdmin ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setMobileMenuOpen(false)
+                        handleLogout()
+                      }}
+                      className="w-full justify-start text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-9"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sair da Conta
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => {
+                        setMobileMenuOpen(false)
+                        navigate('/login')
+                      }}
+                      className="w-full bg-[#0B2545] text-white hover:bg-[#081A33] text-xs h-9"
+                    >
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Login Administrador
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
+            </div>
+          )}
+
+          {/* ÁREA DE CONTEÚDO PRINCIPAL (EXPANDE 100% QUANDO A SIDEBAR ESTÁ RECOLHIDA) */}
+          <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 w-full max-w-[1920px] mx-auto transition-all">
+            <Outlet />
+          </main>
         </div>
-      </footer>
-    </div>
+
+        {/* Rodapé Institucional */}
+        <footer className="no-print bg-white border-t border-[#E5E9F0] py-3 text-center text-xs text-[#6B7280] shrink-0">
+          <div className="max-w-[1920px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <BrasaoPCPB className="w-4 h-auto" />
+              <span className="font-semibold text-[#0B2545]">20ª DSPC</span>
+              <span>•</span>
+              <span>Polícia Civil do Estado da Paraíba</span>
+            </div>
+            <p className="text-[11px]">
+              © {new Date().getFullYear()} Gestão de Escalas Operacionais Policiais. Sistema
+              Integrado.
+            </p>
+          </div>
+        </footer>
+
+        {/* Modal Global da Central de Impressão Multiescalas */}
+        <CentralImpressaoModal open={centralImpressaoOpen} onOpenChange={setCentralImpressaoOpen} />
+      </div>
+    </TooltipProvider>
   )
 }
