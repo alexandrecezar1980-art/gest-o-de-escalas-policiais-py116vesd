@@ -36,16 +36,15 @@ export const servidoresService = {
       )
     }
 
-    // Check if in unidades
+    // Check if in unidades (verifica campos legados e campos dinâmicos json escrivaes / agentes)
     const inUnidades = await pb.collection('unidades').getList(1, 1, {
-      filter: `delegado = "${id}" || escrivao1 = "${id}" || escrivao2 = "${id}" || agente1 = "${id}" || agente2 = "${id}" || agente3 = "${id}" || agente4 = "${id}" || agente5 = "${id}" || agente6 = "${id}" || agente7 = "${id}" || agente8 = "${id}"`,
+      filter: `delegado = "${id}" || escrivao1 = "${id}" || escrivao2 = "${id}" || agente1 = "${id}" || agente2 = "${id}" || agente3 = "${id}" || agente4 = "${id}" || agente5 = "${id}" || agente6 = "${id}" || agente7 = "${id}" || agente8 = "${id}" || escrivaes ~ "${id}" || agentes ~ "${id}"`,
     })
     if (inUnidades.totalItems > 0) {
       throw new Error(
-        'Não é possível excluir este servidor pois ele está lotado em uma Delegacia/Unidade.',
+        'Este servidor está vinculado a uma Delegacia/Unidade na tela de Lotação. Desvincule-o antes de excluir.',
       )
     }
-
     await pb.collection('servidores').delete(id)
     return true
   },

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { Servidor, CargoServidor } from '@/types/police'
+import { getCargosServidor } from '@/types/police'
 import { formatarCpf } from '@/lib/cpfValidation'
 
 export interface ServidorAutocompleteProps {
@@ -47,11 +48,14 @@ export function ServidorAutocomplete({
     return servidores.find((s) => s.id === value) || null
   }, [servidores, value])
 
-  // Filtragem inicial por cargo (se houver restrição)
+  // Filtragem inicial por cargo (considera tanto cargo principal quanto cargos secundários)
   const servidoresFiltradosPorCargo = useMemo(() => {
     if (!filtroCargo) return servidores
-    const cargos = Array.isArray(filtroCargo) ? filtroCargo : [filtroCargo]
-    return servidores.filter((s) => cargos.includes(s.cargo))
+    const cargosAlvo = Array.isArray(filtroCargo) ? filtroCargo : [filtroCargo]
+    return servidores.filter((s) => {
+      const todosCargos = getCargosServidor(s)
+      return cargosAlvo.some((c) => todosCargos.includes(c))
+    })
   }, [servidores, filtroCargo])
 
   // Filtragem pela digitação: NOME, CARGO ou MATRÍCULA (ou CPF)
@@ -63,7 +67,8 @@ export function ServidorAutocomplete({
 
     return servidoresFiltradosPorCargo.filter((s) => {
       const matchNome = s.nome.toLowerCase().includes(termo)
-      const matchCargo = s.cargo.toLowerCase().includes(termo)
+      const todosCargos = getCargosServidor(s).map((c) => c.toLowerCase())
+      const matchCargo = todosCargos.some((c) => c.includes(termo))
       const matchMatricula = !!(s.matricula && s.matricula.toLowerCase().includes(termo))
       const matchCpf = !!(
         s.cpf &&
@@ -167,12 +172,15 @@ export function ServidorAutocomplete({
           {selecionado ? (
             <div className="flex items-center gap-2 truncate">
               <span className="font-semibold text-[#0B2545] truncate">{selecionado.nome}</span>
-              <Badge
-                variant="outline"
-                className="text-[10px] py-0 px-1 border-[#0B2545]/30 bg-blue-50/50 text-[#0B2545] shrink-0 font-normal"
-              >
-                {selecionado.cargo}
-              </Badge>
+              {getCargosServidor(selecionado).map((c) => (
+                <Badge
+                  key={c}
+                  variant="outline"
+                  className="text-[10px] py-0 px-1 border-[#0B2545]/30 bg-blue-50/50 text-[#0B2545] shrink-0 font-normal"
+                >
+                  {c}
+                </Badge>
+              ))}
               {selecionado.matricula && (
                 <span className="text-[10px] text-gray-500 font-mono shrink-0">
                   Mat: {selecionado.matricula}
@@ -269,12 +277,17 @@ export function ServidorAutocomplete({
                         {isSelected && <Check className="w-3.5 h-3.5 text-[#0B2545] shrink-0" />}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#6B7280] flex-wrap">
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] py-0 px-1 border-gray-300 text-gray-700 bg-gray-50"
-                        >
-                          {renderHighlighted(s.cargo, busca)}
-                        </Badge>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {getCargosServidor(s).map((c) => (
+                            <Badge
+                              key={c}
+                              variant="outline"
+                              className="text-[10px] py-0 px-1 border-gray-300 text-gray-700 bg-gray-50"
+                            >
+                              {renderHighlighted(c, busca)}
+                            </Badge>
+                          ))}
+                        </div>
                         {s.matricula && (
                           <span className="font-mono">
                             Mat: {renderHighlighted(s.matricula, busca)}

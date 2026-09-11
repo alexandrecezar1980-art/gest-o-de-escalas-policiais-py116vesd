@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T15:42:46.709Z",
+  "generatedAt": "2026-09-11T01:08:37.863Z",
   "collections": [
     {
       "name": "users",
@@ -128,6 +128,12 @@
             "Domingo",
             "Rotativo"
           ]
+        },
+        {
+          "name": "cargos_secundarios",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -242,6 +248,18 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "escrivaes",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "agentes",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_unidades_delegado ON unidades (delegado)"]

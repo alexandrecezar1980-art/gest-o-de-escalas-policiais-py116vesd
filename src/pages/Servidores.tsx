@@ -74,6 +74,7 @@ export default function Servidores() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formNome, setFormNome] = useState('')
   const [formCargo, setFormCargo] = useState<CargoServidor>('Agente/Investigador')
+  const [formCargosSecundarios, setFormCargosSecundarios] = useState<CargoServidor[]>([])
   const [formTelefone, setFormTelefone] = useState('')
   const [formStatus, setFormStatus] = useState<StatusServidor>('Ativo')
   const [formMatricula, setFormMatricula] = useState('')
@@ -112,6 +113,7 @@ export default function Servidores() {
     setEditingId(null)
     setFormNome('')
     setFormCargo('Agente/Investigador')
+    setFormCargosSecundarios([])
     setFormTelefone('')
     setFormStatus('Ativo')
     setFormMatricula('')
@@ -126,6 +128,7 @@ export default function Servidores() {
     setEditingId(s.id)
     setFormNome(s.nome)
     setFormCargo(s.cargo)
+    setFormCargosSecundarios(Array.isArray(s.cargos_secundarios) ? s.cargos_secundarios : [])
     setFormTelefone(s.telefone)
     setFormStatus(s.status)
     setFormMatricula(s.matricula || '')
@@ -168,6 +171,7 @@ export default function Servidores() {
     const payload = {
       nome: formNome.trim(),
       cargo: formCargo,
+      cargos_secundarios: formCargosSecundarios.filter((c) => c !== formCargo),
       telefone: formTelefone.trim(),
       status: formStatus,
       matricula: formMatricula.trim() || undefined,
@@ -225,7 +229,14 @@ export default function Servidores() {
         (s.matricula && s.matricula.toLowerCase().includes(term)) ||
         (s.cpf && s.cpf.replace(/\D/g, '').includes(term.replace(/\D/g, ''))) ||
         (s.email && s.email.toLowerCase().includes(term))
-      const matchCargo = filtroCargo === 'todos' || s.cargo === filtroCargo
+      const cargosDoServidor = [
+        s.cargo,
+        ...(Array.isArray(s.cargos_secundarios) ? s.cargos_secundarios : []),
+      ]
+      const matchCargo =
+        filtroCargo === 'todos' ||
+        s.cargo === filtroCargo ||
+        cargosDoServidor.includes(filtroCargo as CargoServidor)
       const matchStatus = filtroStatus === 'todos' || s.status === filtroStatus
       return matchSearch && matchCargo && matchStatus
     })
@@ -363,18 +374,31 @@ export default function Servidores() {
                       {s.cpf ? formatarCpf(s.cpf) : <span className="text-gray-400 italic">-</span>}
                     </td>
                     <td className="py-3 px-4">
-                      <Badge
-                        variant="outline"
-                        className={`font-medium text-xs ${
-                          s.cargo === 'Delegado'
-                            ? 'bg-[#0B2545]/10 text-[#0B2545] border-[#0B2545]/30'
-                            : s.cargo === 'Escrivão'
-                              ? 'bg-blue-50 text-[#1D4E89] border-blue-200'
-                              : 'bg-slate-100 text-slate-800 border-slate-300'
-                        }`}
-                      >
-                        {s.cargo}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge
+                          variant="outline"
+                          className={`font-medium text-xs ${
+                            s.cargo === 'Delegado'
+                              ? 'bg-[#0B2545]/10 text-[#0B2545] border-[#0B2545]/30'
+                              : s.cargo === 'Escrivão'
+                                ? 'bg-blue-50 text-[#1D4E89] border-blue-200'
+                                : 'bg-slate-100 text-slate-800 border-slate-300'
+                          }`}
+                        >
+                          {s.cargo}
+                        </Badge>
+                        {Array.isArray(s.cargos_secundarios) &&
+                          s.cargos_secundarios.map((cs) => (
+                            <Badge
+                              key={cs}
+                              variant="secondary"
+                              className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 font-medium"
+                              title="Função / Cargo Secundário"
+                            >
+                              + {cs}
+                            </Badge>
+                          ))}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-[#1F2937] font-mono text-xs">
                       <span className="flex items-center gap-1.5">
@@ -520,14 +544,18 @@ export default function Servidores() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="cargo" className="text-xs font-semibold text-[#1F2937]">
-                  Cargo / Função *
+                  Cargo Principal *
                 </Label>
                 <Select
                   value={formCargo}
-                  onValueChange={(val) => setFormCargo(val as CargoServidor)}
+                  onValueChange={(val) => {
+                    const novoCargo = val as CargoServidor
+                    setFormCargo(novoCargo)
+                    setFormCargosSecundarios((prev) => prev.filter((c) => c !== novoCargo))
+                  }}
                 >
                   <SelectTrigger id="cargo" className="h-9 border-[#D1D5DB] text-xs">
-                    <SelectValue placeholder="Selecione o cargo" />
+                    <SelectValue placeholder="Selecione o cargo principal" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Delegado">Delegado</SelectItem>
@@ -553,6 +581,48 @@ export default function Servidores() {
                     <SelectItem value="Inativo">Inativo (Afastado)</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Suporte a Multifunção / Cargo Duplo */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-[#0B2545]">
+                  Funções Adicionais / Cargo Duplo (Multifunção)
+                </Label>
+                <span className="text-[10px] text-[#6B7280]">Opcional</span>
+              </div>
+              <p className="text-[11px] text-[#6B7280]">
+                Marque se o servidor também atua em outras funções operacionais simultaneamente
+                (ex.: Agente e Escrivão).
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {(['Delegado', 'Escrivão', 'Agente/Investigador'] as CargoServidor[])
+                  .filter((c) => c !== formCargo)
+                  .map((c) => {
+                    const isChecked = formCargosSecundarios.includes(c)
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          if (isChecked) {
+                            setFormCargosSecundarios((prev) => prev.filter((x) => x !== c))
+                          } else {
+                            setFormCargosSecundarios((prev) => [...prev, c])
+                          }
+                        }}
+                        className={`text-xs px-2.5 py-1 rounded-md border font-medium flex items-center gap-1.5 transition-colors ${
+                          isChecked
+                            ? 'bg-[#0B2545] text-white border-[#0B2545]'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-[#0B2545]/50'
+                        }`}
+                      >
+                        <span>{isChecked ? '✓' : '+'}</span>
+                        <span>{c}</span>
+                      </button>
+                    )
+                  })}
               </div>
             </div>
 

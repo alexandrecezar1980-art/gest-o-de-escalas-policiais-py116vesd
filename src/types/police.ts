@@ -14,6 +14,7 @@ export interface Servidor {
   id: string
   nome: string
   cargo: CargoServidor
+  cargos_secundarios?: CargoServidor[]
   telefone: string
   status: StatusServidor
   matricula?: string
@@ -30,6 +31,7 @@ export interface Unidade {
   delegado: string
   escrivao1?: string | null
   escrivao2?: string | null
+  escrivaes?: string[]
   agente1?: string | null
   agente2?: string | null
   agente3?: string | null
@@ -38,6 +40,7 @@ export interface Unidade {
   agente6?: string | null
   agente7?: string | null
   agente8?: string | null
+  agentes?: string[]
   created: string
   updated: string
   [key: string]: unknown
@@ -54,6 +57,60 @@ export interface Unidade {
     agente7?: Servidor
     agente8?: Servidor
   }
+}
+
+/**
+ * Retorna todos os cargos/funções de um servidor (cargo principal + cargos secundários)
+ */
+export function getCargosServidor(s: Servidor | undefined | null): CargoServidor[] {
+  if (!s) return []
+  const cargos: CargoServidor[] = [s.cargo]
+  if (Array.isArray(s.cargos_secundarios)) {
+    for (const c of s.cargos_secundarios) {
+      if (c && !cargos.includes(c)) {
+        cargos.push(c)
+      }
+    }
+  }
+  return cargos
+}
+
+/**
+ * Verifica se o servidor possui determinado cargo (seja primário ou secundário)
+ */
+export function servidorTemCargo(s: Servidor | undefined | null, cargo: CargoServidor): boolean {
+  if (!s) return false
+  return getCargosServidor(s).includes(cargo)
+}
+
+/**
+ * Helper para extrair a lista completa de IDs de escrivães de uma unidade
+ */
+export function getUnidadeEscrivaes(u: Unidade | undefined | null): string[] {
+  if (!u) return []
+  if (Array.isArray(u.escrivaes) && u.escrivaes.length > 0) {
+    return u.escrivaes.filter(Boolean)
+  }
+  const list: string[] = []
+  if (u.escrivao1) list.push(u.escrivao1)
+  if (u.escrivao2 && !list.includes(u.escrivao2)) list.push(u.escrivao2)
+  return list
+}
+
+/**
+ * Helper para extrair a lista completa de IDs de agentes de uma unidade
+ */
+export function getUnidadeAgentes(u: Unidade | undefined | null): string[] {
+  if (!u) return []
+  if (Array.isArray(u.agentes) && u.agentes.length > 0) {
+    return u.agentes.filter(Boolean)
+  }
+  const list: string[] = []
+  for (let i = 1; i <= 8; i++) {
+    const val = (u as Record<string, unknown>)[`agente${i}`] as string | undefined
+    if (val && !list.includes(val)) list.push(val)
+  }
+  return list
 }
 
 export interface Ferias {

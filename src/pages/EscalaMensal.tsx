@@ -142,17 +142,36 @@ export default function EscalaMensal() {
   useRealtime('feriados', () => carregarDados())
   useRealtime('ferias', () => carregarDados())
 
-  // Servidores por Cargo (Ativos)
+  // Servidores por Cargo (Ativos, suportando multifunção / cargos secundários)
   const delegados = useMemo(
-    () => servidores.filter((s) => s.cargo === 'Delegado' && s.status === 'Ativo'),
+    () =>
+      servidores.filter(
+        (s) =>
+          (s.cargo === 'Delegado' ||
+            (Array.isArray(s.cargos_secundarios) && s.cargos_secundarios.includes('Delegado'))) &&
+          s.status === 'Ativo',
+      ),
     [servidores],
   )
   const escrivaes = useMemo(
-    () => servidores.filter((s) => s.cargo === 'Escrivão' && s.status === 'Ativo'),
+    () =>
+      servidores.filter(
+        (s) =>
+          (s.cargo === 'Escrivão' ||
+            (Array.isArray(s.cargos_secundarios) && s.cargos_secundarios.includes('Escrivão'))) &&
+          s.status === 'Ativo',
+      ),
     [servidores],
   )
   const agentes = useMemo(
-    () => servidores.filter((s) => s.cargo === 'Agente/Investigador' && s.status === 'Ativo'),
+    () =>
+      servidores.filter(
+        (s) =>
+          (s.cargo === 'Agente/Investigador' ||
+            (Array.isArray(s.cargos_secundarios) &&
+              s.cargos_secundarios.includes('Agente/Investigador'))) &&
+          s.status === 'Ativo',
+      ),
     [servidores],
   )
 

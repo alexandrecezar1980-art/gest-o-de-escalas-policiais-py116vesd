@@ -90,9 +90,16 @@ export default function EscalaCustodias() {
 
   useRealtime('custodias', () => carregarDados())
 
-  // Filtra somente agentes/investigadores ativos para a custódia
+  // Filtra agentes/investigadores ativos (incluindo servidores com multifunção de Agente)
   const agentes = useMemo(
-    () => servidores.filter((s) => s.cargo === 'Agente/Investigador' && s.status === 'Ativo'),
+    () =>
+      servidores.filter(
+        (s) =>
+          (s.cargo === 'Agente/Investigador' ||
+            (Array.isArray(s.cargos_secundarios) &&
+              s.cargos_secundarios.includes('Agente/Investigador'))) &&
+          s.status === 'Ativo',
+      ),
     [servidores],
   )
 

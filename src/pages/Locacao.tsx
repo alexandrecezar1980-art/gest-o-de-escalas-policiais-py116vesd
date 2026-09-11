@@ -37,6 +37,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { unidadesService, servidoresService } from '@/services/policeServices'
 import type { Unidade, Servidor } from '@/types/police'
+import { getUnidadeEscrivaes, getUnidadeAgentes } from '@/types/police'
 import ServidorAutocomplete from '@/components/ServidorAutocomplete'
 import ConfirmacaoOperacionalModal from '@/components/ConfirmacaoOperacionalModal'
 import useRealtime from '@/hooks/use-realtime'
@@ -107,27 +108,43 @@ export default function Locacao() {
       }
 
       registrar(u.delegado)
-      registrar(u.escrivao1)
-      registrar(u.escrivao2)
-      for (let i = 1; i <= 8; i++) {
-        const agId = (u as Record<string, unknown>)[`agente${i}`] as string | undefined
+      for (const escId of getUnidadeEscrivaes(u)) {
+        registrar(escId)
+      }
+      for (const agId of getUnidadeAgentes(u)) {
         registrar(agId)
       }
     }
     return map
   }, [unidades, editingId])
 
-  // Listas de servidores por cargo
+  // Listas de servidores por cargo (suportando multifunção / cargos secundários)
   const delegadosDisponiveis = useMemo(() => {
-    return servidores.filter((s) => s.cargo === 'Delegado' && s.status === 'Ativo')
+    return servidores.filter(
+      (s) =>
+        (s.cargo === 'Delegado' ||
+          (Array.isArray(s.cargos_secundarios) && s.cargos_secundarios.includes('Delegado'))) &&
+        s.status === 'Ativo',
+    )
   }, [servidores])
 
   const escrivaesDisponiveis = useMemo(() => {
-    return servidores.filter((s) => s.cargo === 'Escrivão' && s.status === 'Ativo')
+    return servidores.filter(
+      (s) =>
+        (s.cargo === 'Escrivão' ||
+          (Array.isArray(s.cargos_secundarios) && s.cargos_secundarios.includes('Escrivão'))) &&
+        s.status === 'Ativo',
+    )
   }, [servidores])
 
   const agentesDisponiveis = useMemo(() => {
-    return servidores.filter((s) => s.cargo === 'Agente/Investigador' && s.status === 'Ativo')
+    return servidores.filter(
+      (s) =>
+        (s.cargo === 'Agente/Investigador' ||
+          (Array.isArray(s.cargos_secundarios) &&
+            s.cargos_secundarios.includes('Agente/Investigador'))) &&
+        s.status === 'Ativo',
+    )
   }, [servidores])
 
   const handleOpenCreate = () => {
@@ -146,18 +163,8 @@ export default function Locacao() {
     setEditingId(u.id)
     setFormNome(u.nome)
     setFormDelegado(u.delegado || '')
-
-    const esc: string[] = []
-    if (u.escrivao1) esc.push(u.escrivao1)
-    if (u.escrivao2) esc.push(u.escrivao2)
-    setFormEscrivaes(esc)
-
-    const ags: string[] = []
-    for (let i = 1; i <= 8; i++) {
-      const agId = (u as Record<string, unknown>)[`agente${i}`] as string | undefined
-      if (agId) ags.push(agId)
-    }
-    setFormAgentes(ags)
+    setFormEscrivaes(getUnidadeEscrivaes(u))
+    setFormAgentes(getUnidadeAgentes(u))
     setNovoEscrivaoId('')
     setNovoAgenteId('')
     setFormError('')
@@ -240,6 +247,9 @@ export default function Locacao() {
     const payload: Partial<Unidade> = {
       nome: formNome.trim(),
       delegado: formDelegado,
+      escrivaes: formEscrivaes,
+      agentes: formAgentes,
+      // Retrocompatibilidade com campos legados
       escrivao1: formEscrivaes[0] || null,
       escrivao2: formEscrivaes[1] || null,
       agente1: formAgentes[0] || null,
@@ -307,10 +317,8 @@ export default function Locacao() {
         // Encontrar todas as unidades em que o servidor está lotado (delegados multi-unidade!)
         const unds = unidades.filter((u) => {
           if (u.delegado === s.id) return true
-          if (u.escrivao1 === s.id || u.escrivao2 === s.id) return true
-          for (let i = 1; i <= 8; i++) {
-            if ((u as Record<string, unknown>)[`agente${i}`] === s.id) return true
-          }
+          if (getUnidadeEscrivaes(u).includes(s.id)) return true
+          if (getUnidadeAgentes(u).includes(s.id)) return true
           return false
         })
 
@@ -363,6 +371,16 @@ export default function Locacao() {
             Imprimir Expediente (A4)
           </Button>
 
+          <a
+            href="/database_dump.sql"
+            download="database_dump.sql"
+            className="inline-flex items-center gap-1.5 px-3 h-9 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-md shadow-sm transition-colors"
+            title="Baixar dump completo ANSI SQL / PostgreSQL do banco"
+          >
+            <Layers className="w-3.5 h-3.5 text-slate-500" />
+            Exportar Banco (SQL)
+          </a>
+
           <Button
             onClick={handleOpenCreate}
             className="bg-[#0B2545] hover:bg-[#081A33] text-white font-medium shadow-sm text-xs h-9 flex items-center gap-1.5"
@@ -385,17 +403,8 @@ export default function Locacao() {
           </div>
         ) : (
           unidades.map((u) => {
-            const escrivaesList = [u.escrivao1, u.escrivao2].filter(Boolean) as string[]
-            const agentesList = [
-              u.agente1,
-              u.agente2,
-              u.agente3,
-              u.agente4,
-              u.agente5,
-              u.agente6,
-              u.agente7,
-              u.agente8,
-            ].filter(Boolean) as string[]
+            const escrivaesList = getUnidadeEscrivaes(u)
+            const agentesList = getUnidadeAgentes(u)
 
             return (
               <div
@@ -886,17 +895,8 @@ export default function Locacao() {
             </thead>
             <tbody>
               {unidades.map((u) => {
-                const escList = [u.escrivao1, u.escrivao2].filter(Boolean) as string[]
-                const agList = [
-                  u.agente1,
-                  u.agente2,
-                  u.agente3,
-                  u.agente4,
-                  u.agente5,
-                  u.agente6,
-                  u.agente7,
-                  u.agente8,
-                ].filter(Boolean) as string[]
+                const escList = getUnidadeEscrivaes(u)
+                const agList = getUnidadeAgentes(u)
 
                 return (
                   <tr key={u.id} className="border-b border-gray-300">
@@ -910,20 +910,24 @@ export default function Locacao() {
                       {escList.length === 0 ? (
                         <span className="text-gray-400 italic">-</span>
                       ) : (
-                        <ul className="list-disc pl-3 space-y-0.5">
+                        <div className="space-y-1">
                           {escList.map((id) => (
-                            <li key={id}>{getNome(id)}</li>
+                            <div key={id} className="font-medium text-gray-900">
+                              • {getNome(id)}
+                            </div>
                           ))}
-                        </ul>
+                        </div>
                       )}
                     </td>
                     <td className="py-2 px-2 align-top">
                       {agList.length === 0 ? (
                         <span className="text-gray-400 italic">-</span>
                       ) : (
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                           {agList.map((id) => (
-                            <span key={id}>• {getNome(id)}</span>
+                            <span key={id} className="font-medium text-gray-900">
+                              • {getNome(id)}
+                            </span>
                           ))}
                         </div>
                       )}
